@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserCreate(BaseModel):
@@ -16,14 +16,13 @@ class UserLogin(BaseModel):
 
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     email: str
     role: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class Token(BaseModel):
@@ -32,6 +31,8 @@ class Token(BaseModel):
 
 
 class TaskResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     fipi_id: str
     guid: Optional[str] = None
@@ -42,9 +43,6 @@ class TaskResponse(BaseModel):
     images: list[Any] = Field(default_factory=list)
     inline_images: list[Any] = Field(default_factory=list)
     tables: list[Any] = Field(default_factory=list)
-
-    class Config:
-        from_attributes = True
 
 
 class TaskUpdate(BaseModel):
@@ -62,13 +60,12 @@ class TaskListResponse(BaseModel):
 
 
 class SolutionFileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     filename: str
     filepath: str
     file_type: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 class SolutionCreate(BaseModel):
@@ -78,6 +75,8 @@ class SolutionCreate(BaseModel):
 
 
 class SolutionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     task_id: int
@@ -88,9 +87,6 @@ class SolutionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     username: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 class CheckAnswerRequest(BaseModel):
@@ -110,6 +106,8 @@ class VariantCreate(BaseModel):
 
 
 class VariantResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     description: Optional[str] = None
@@ -117,11 +115,10 @@ class VariantResponse(BaseModel):
     created_at: datetime
     tasks: list[TaskResponse] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
-
 
 class UserStatsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     total_attempts: int = 0
     correct_attempts: int = 0
     tasks_solved: int = 0
@@ -130,9 +127,6 @@ class UserStatsResponse(BaseModel):
     streak_max: int = 0
     last_activity: Optional[datetime] = None
     stats_by_type: dict[str, Any] = Field(default_factory=dict)
-
-    class Config:
-        from_attributes = True
 
 
 class ClassCreate(BaseModel):
@@ -146,23 +140,21 @@ class ClassAddMember(BaseModel):
 
 
 class ClassMemberResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     username: str
     email: str
     role: str
 
-    class Config:
-        from_attributes = True
-
 
 class ClassResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     description: Optional[str] = None
     created_by: int
     created_at: datetime
     members: list[ClassMemberResponse] = Field(default_factory=list)
-
-    class Config:
-        from_attributes = True

@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import os
 import sys
@@ -9,15 +10,28 @@ if not os.getenv("DATABASE_URL"):
     load_dotenv()
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import hash_password
 from backend.database import Base, async_session, engine
 from backend.models import Task, User, UserStats
 
 
-async def import_tasks(json_path: str) -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@asynccontextmanager
+async def _get_session(db_session: AsyncSession | None):
+    if db_session is not None:
+        yield db_session
+    else:
+        async with async_session() as session:
+            yield session
+
+
+async def import_tasks(
+    json_path: str, db_session: AsyncSession | None = None
+) -> None:
+    if db_session is None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -25,7 +39,7 @@ async def import_tasks(json_path: str) -> None:
     imported = 0
     skipped = 0
 
-    async with async_session() as db:
+    async with _get_session(db_session) as db:
         for item in data:
             fipi_id = item.get("id", "")
             if not fipi_id:
@@ -53,7 +67,10 @@ async def import_tasks(json_path: str) -> None:
             db.add(task)
             imported += 1
 
-        await db.commit()
+        await db.flush()
+
+        if db_session is None:
+            await db.commit()
 
     print(f"Импортировано: {imported}, пропущено: {skipped}")
 

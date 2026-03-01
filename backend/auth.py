@@ -5,7 +5,7 @@ from typing import Annotated, Any, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError, decode, encode
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +41,7 @@ def create_access_token(data: dict[str, Any]) -> str:
         days=ACCESS_TOKEN_EXPIRE_DAYS
     )
     to_encode.update({"exp": expire})
-    return cast(str, jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM))
+    return cast(str, encode(to_encode, SECRET_KEY, algorithm=ALGORITHM))
 
 
 async def get_current_user(
@@ -54,11 +54,11 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except InvalidTokenError:
         raise credentials_exception
 
     result = await db.execute(select(User).where(User.id == int(user_id)))
@@ -70,7 +70,7 @@ async def get_current_user(
 
 def require_role(*roles: str) -> Callable[..., Any]:
     async def role_checker(
-        current_user: Annotated[User, Depends(get_current_user)]
+        current_user: Annotated[User, Depends(get_current_user)],
     ) -> User:
         if current_user.role not in roles:
             raise HTTPException(status_code=403, detail="Недостаточно прав")

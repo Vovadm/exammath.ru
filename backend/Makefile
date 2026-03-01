@@ -4,5 +4,5 @@ lint:
 	flake8 .
 	cd .. && mypy backend
 
-# test:
-# 	pytest .c
+test:
+	pytest tests --asyncio-mode=auto
