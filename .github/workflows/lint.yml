@@ -35,6 +35,11 @@ jobs:
         run: |
           cd backend
           make lint
+          
+      - name: Run tests
+        run: |
+          cd backend
+          make test
 
   frontend-lint:
     runs-on: ubuntu-latest

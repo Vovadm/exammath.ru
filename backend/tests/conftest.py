@@ -35,6 +35,11 @@ def event_loop():
     loop.close()
 
 
+@pytest.fixture(autouse=True)
+def disable_turnstile(monkeypatch):
+    monkeypatch.delenv("TURNSTILE_SECRET_KEY", raising=False)
+
+
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def _create_tables():
     async with engine.begin() as conn:

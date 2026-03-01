@@ -5,3 +5,6 @@ archive
 *.pem
 *.key
 .mypy_cache
+.pytest_cache
+.vscode
+uploads

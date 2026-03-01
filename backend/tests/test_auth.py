@@ -15,8 +15,8 @@ from backend.auth import (
 from backend.tests.conftest import auth_headers, fake
 
 
-@pytest.mark.asyncio
 class TestRegistration:
+    @pytest.mark.asyncio
     async def test_register_success(self, client):
         resp = await client.post(
             "/api/auth/register",
@@ -26,11 +26,14 @@ class TestRegistration:
                 "password": "SecurePass1!",
             },
         )
+        if resp.status_code != 200:
+            print(f"Response status: {resp.status_code}, body: {resp.text}")
         assert resp.status_code == 200
         data = resp.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
 
+    @pytest.mark.asyncio
     async def test_register_duplicate_username(self, client):
         username = fake.unique.user_name()[:40]
         payload = {
@@ -46,6 +49,7 @@ class TestRegistration:
         assert resp2.status_code == 400
         assert "уже занято" in resp2.json()["detail"]
 
+    @pytest.mark.asyncio
     async def test_register_duplicate_email(self, client):
         email = fake.unique.email()
         resp1 = await client.post(
@@ -91,6 +95,7 @@ class TestJWT:
         resp = await client.get("/api/auth/me", headers=auth_headers(token))
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
     async def test_expired_token_rejected_async(self, client):
         expired_payload = {
             "sub": "999",
@@ -100,6 +105,7 @@ class TestJWT:
         resp = await client.get("/api/auth/me", headers=auth_headers(token))
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
     async def test_invalid_token_rejected(self, client):
         resp = await client.get(
             "/api/auth/me",
@@ -108,8 +114,8 @@ class TestJWT:
         assert resp.status_code == 401
 
 
-@pytest.mark.asyncio
 class TestRBAC:
+    @pytest.mark.asyncio
     async def test_student_cannot_access_admin(self, client, student):
         _, token = student
         resp = await client.get(
@@ -117,6 +123,7 @@ class TestRBAC:
         )
         assert resp.status_code == 403
 
+    @pytest.mark.asyncio
     async def test_anonymous_cannot_create_solution(self, client):
         resp = await client.post(
             "/api/solutions/check",
@@ -124,6 +131,7 @@ class TestRBAC:
         )
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
     async def test_student_cannot_create_class(self, client, student):
         _, token = student
         resp = await client.post(
@@ -133,6 +141,7 @@ class TestRBAC:
         )
         assert resp.status_code == 403
 
+    @pytest.mark.asyncio
     async def test_teacher_can_create_variant(
         self, client, teacher, db_session
     ):
@@ -147,6 +156,7 @@ class TestRBAC:
         )
         assert resp.status_code == 200
 
+    @pytest.mark.asyncio
     async def test_admin_can_access_admin_panel(self, client, admin):
         _, token = admin
         resp = await client.get(
