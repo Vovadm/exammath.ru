@@ -13,5 +13,5 @@ types-requests
 types-urllib3
 
 pytest==9.0.2
-ytest_asyncio==1.3.0
+test_asyncio==1.3.0
 aiosqlite==0.22.1
