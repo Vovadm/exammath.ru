@@ -31,7 +31,12 @@ TestSession = async_sessionmaker(
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
+    pending = asyncio.all_tasks(loop)
+    for task in pending:
+        task.cancel()
+    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
     loop.close()
 
 
@@ -47,6 +52,7 @@ async def _create_tables():
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture()
