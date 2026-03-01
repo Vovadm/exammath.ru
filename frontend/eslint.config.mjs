@@ -8,7 +8,7 @@ import globals from 'globals';
 
 const eslintConfig = [
   {
-    ignores: ['.next/**', 'node_modules/**', 'dist/**', 'build/**'],
+    ignores: ['.next/**', 'node_modules/**', 'dist/**', 'build/**', 'src/__tests__/**'],
   },
   js.configs.recommended,
   {
