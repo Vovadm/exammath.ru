@@ -1,0 +1,9 @@
+__pycache__
+*.pyc
+.venv
+uploads/*
+.env
+.git
+init_db.sql
+exammath.db
+.mypy_cache

@@ -1,0 +1,14 @@
+export function formatDateTime(isoString: string): string {
+  const date = new Date(isoString);
+
+  const formatted = date.toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return formatted;
+}

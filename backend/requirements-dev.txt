@@ -1,0 +1,13 @@
+black==24.2.0
+isort==5.13.2
+
+flake8==7.0.0
+flake8-bugbear==24.2.6
+flake8-quotes==3.4.0
+pep8-naming==0.13.3
+flake8-comprehensions==3.14.0
+
+mypy==1.8.0
+types-setuptools
+types-requests
+types-urllib3
