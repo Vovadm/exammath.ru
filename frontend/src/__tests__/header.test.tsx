@@ -53,7 +53,12 @@ describe('Header', () => {
 
   it('shows username when authenticated', () => {
     mockUseAuth.mockReturnValue({
-      user: { id: 1, username: 'testuser', email: 'test@test.com', role: 'student' },
+      user: {
+        id: 1,
+        username: 'testuser',
+        email: 'test@test.com',
+        role: 'student',
+      },
       logout: vi.fn(),
     });
     render(<Header />);
@@ -62,7 +67,12 @@ describe('Header', () => {
 
   it('does not show login/register when authenticated', () => {
     mockUseAuth.mockReturnValue({
-      user: { id: 1, username: 'testuser', email: 'test@test.com', role: 'student' },
+      user: {
+        id: 1,
+        username: 'testuser',
+        email: 'test@test.com',
+        role: 'student',
+      },
       logout: vi.fn(),
     });
     render(<Header />);

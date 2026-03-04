@@ -120,7 +120,8 @@ export default function ProfilePage() {
                   className="flex items-center justify-between p-2 bg-gray-50 rounded"
                 >
                   <span className="text-sm">
-                    Задание #{item.task_id} — &quot;{item.answer}&quot;
+                    Задание #{item.task_id} — &quot;{item.answer}
+                    &quot;
                   </span>
                   <div className="flex items-center gap-2">
                     <span
