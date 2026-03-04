@@ -2,8 +2,7 @@
 fipi_questions.json
 parser.py
 archive
-*.pem
-*.key
+nginx/certs
 .mypy_cache
 .pytest_cache
 .vscode
