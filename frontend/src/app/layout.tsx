@@ -41,3 +41,17 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
 };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ru">
+      <body className={`${inter.className} flex flex-col min-h-screen`}> 
+        <AuthProvider>
+          <Header />
+          <main className="flex-1 bg-gray-50">{children}</main>
+          <Footer />
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
