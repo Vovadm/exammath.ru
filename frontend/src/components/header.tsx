@@ -45,6 +45,11 @@ export function Header() {
                     <Link href="/admin">Админ-панель</Link>
                   </DropdownMenuItem>
                 )}
+                {(user.role === 'teacher' || user.role === 'admin') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/teacher">Панель учителя</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={logout}>Выйти</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

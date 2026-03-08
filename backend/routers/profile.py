@@ -4,10 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.auth import get_current_user
+from backend.auth import get_current_user, hash_password, verify_password
 from backend.database import get_db
 from backend.models import Solution, User, UserStats
-from backend.schemas import UserResponse, UserStatsResponse
+from backend.schemas import (
+    ChangePasswordRequest,
+    ChartStatsResponse,
+    UserResponse,
+    UserStatsResponse,
+)
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -28,6 +33,39 @@ async def get_history(
     db: DbSession,
 ) -> list[dict[str, object]]:
     return await _get_user_history(current_user.id, db)
+
+
+@router.get("/chart-stats", response_model=ChartStatsResponse)
+async def get_my_chart_stats(
+    current_user: CurrentUser,
+    db: DbSession,
+) -> ChartStatsResponse:
+    return await _get_chart_stats(current_user.id, db)
+
+
+@router.delete("/me")
+async def delete_account(
+    current_user: CurrentUser,
+    db: DbSession,
+) -> dict[str, bool]:
+    await db.delete(current_user)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.put("/me/password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> dict[str, bool]:
+    if not verify_password(data.old_password, current_user.hashed_password):
+        raise HTTPException(400, "Неверный текущий пароль")
+    if len(data.new_password) < 6:
+        raise HTTPException(400, "Пароль должен быть не менее 6 символов")
+    current_user.hashed_password = hash_password(data.new_password)
+    await db.commit()
+    return {"ok": True}
 
 
 @router.get("/user/{user_id}", response_model=UserResponse)
@@ -67,6 +105,17 @@ async def get_user_history(
     return await _get_user_history(user_id, db)
 
 
+@router.get("/user/{user_id}/chart-stats", response_model=ChartStatsResponse)
+async def get_user_chart_stats(
+    user_id: int,
+    db: DbSession,
+) -> ChartStatsResponse:
+    result = await db.execute(select(User).where(User.id == user_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(404, "Пользователь не найден")
+    return await _get_chart_stats(user_id, db)
+
+
 async def _get_user_stats(user_id: int, db: AsyncSession) -> UserStatsResponse:
     result = await db.execute(
         select(UserStats).where(UserStats.user_id == user_id)
@@ -104,7 +153,6 @@ async def _get_user_history(
         .limit(50)
     )
     solutions = result.scalars().all()
-
     return [
         {
             "id": s.id,
@@ -115,3 +163,29 @@ async def _get_user_history(
         }
         for s in solutions
     ]
+
+
+async def _get_chart_stats(
+    user_id: int, db: AsyncSession
+) -> ChartStatsResponse:
+    result = await db.execute(
+        select(UserStats).where(UserStats.user_id == user_id)
+    )
+    stats = result.scalar_one_or_none()
+    if not stats or not stats.stats_by_type:
+        return ChartStatsResponse()
+
+    solved_by_type: dict[str, int] = {}
+    success_rate_by_type: dict[str, float] = {}
+
+    for type_key, data in stats.stats_by_type.items():
+        attempts = data.get("attempts", 0)
+        correct = data.get("correct", 0)
+        if attempts > 0:
+            solved_by_type[type_key] = attempts
+            success_rate_by_type[type_key] = round(correct / attempts * 100, 1)
+
+    return ChartStatsResponse(
+        solved_by_type=solved_by_type,
+        success_rate_by_type=success_rate_by_type,
+    )

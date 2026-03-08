@@ -14,6 +14,7 @@ from backend.routers import (
     profile,
     solutions,
     tasks,
+    teacher,
     variants,
 )
 
@@ -49,6 +50,7 @@ app.include_router(variants.router)
 app.include_router(admin.router)
 app.include_router(profile.router)
 app.include_router(classes.router)
+app.include_router(teacher.router)
 
 
 @app.get("/api/health")

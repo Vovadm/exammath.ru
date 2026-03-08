@@ -103,6 +103,8 @@ class VariantCreate(BaseModel):
     title: str
     description: Optional[str] = None
     task_ids: list[int]
+    class_id: Optional[int] = None
+    is_public: bool = False
 
 
 class VariantResponse(BaseModel):
@@ -112,6 +114,8 @@ class VariantResponse(BaseModel):
     title: str
     description: Optional[str] = None
     created_by: int
+    class_id: Optional[int] = None
+    is_public: bool = False
     created_at: datetime
     tasks: list[TaskResponse] = Field(default_factory=list)
 
@@ -127,6 +131,16 @@ class UserStatsResponse(BaseModel):
     streak_max: int = 0
     last_activity: Optional[datetime] = None
     stats_by_type: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChartStatsResponse(BaseModel):
+    solved_by_type: dict[str, int] = Field(default_factory=dict)
+    success_rate_by_type: dict[str, float] = Field(default_factory=dict)
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
 
 
 class ClassCreate(BaseModel):
@@ -158,3 +172,14 @@ class ClassResponse(BaseModel):
     created_by: int
     created_at: datetime
     members: list[ClassMemberResponse] = Field(default_factory=list)
+
+
+class VariantStudentTaskView(BaseModel):
+    task: TaskResponse
+    solution: Optional[SolutionResponse] = None
+
+
+class VariantStudentView(BaseModel):
+    variant: VariantResponse
+    student: UserResponse
+    task_views: list[VariantStudentTaskView] = Field(default_factory=list)

@@ -91,11 +91,18 @@ export interface UserStats {
   stats_by_type: Record<string, { attempts: number; correct: number }>;
 }
 
+export interface ChartStats {
+  solved_by_type: Record<string, number>;
+  success_rate_by_type: Record<string, number>;
+}
+
 export interface Variant {
   id: number;
   title: string;
   description?: string;
   created_by: number;
+  class_id?: number | null;
+  is_public: boolean;
   created_at: string;
   tasks: Task[];
 }
@@ -115,6 +122,17 @@ export interface ClassMember {
   username: string;
   email: string;
   role: string;
+}
+
+export interface VariantStudentTaskView {
+  task: Task;
+  solution?: Solution | null;
+}
+
+export interface VariantStudentView {
+  variant: Variant;
+  student: User;
+  task_views: VariantStudentTaskView[];
 }
 
 export const TYPE_NAMES: Record<number, string> = {

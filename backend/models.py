@@ -144,6 +144,10 @@ class Variant(Base):
     created_by: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False
     )
+    class_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("school_classes.id"), nullable=True
+    )
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -155,6 +159,9 @@ class Variant(Base):
         lazy="selectin",
     )
     creator: Mapped[User] = relationship("User", lazy="selectin")
+    school_class: Mapped[SchoolClass | None] = relationship(
+        "SchoolClass", lazy="selectin"
+    )
 
 
 class VariantItem(Base):

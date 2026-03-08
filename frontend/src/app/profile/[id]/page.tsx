@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import api, { User, UserStats, TYPE_NAMES } from '@/lib/api';
+import api, { ChartStats, User, UserStats } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/format-date';
+import { StatsCharts } from '@/components/stats-charts';
 
 interface HistoryItem {
   id: number;
@@ -21,10 +22,16 @@ export default function UserProfilePage() {
   const params = useParams();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [chartStats, setChartStats] = useState<ChartStats | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [error, setError] = useState('');
 
   const userId = params.id as string;
+
+  const canSeeHistory =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'teacher' ||
+    String(currentUser?.id) === userId;
 
   useEffect(() => {
     if (!userId) return;
@@ -40,10 +47,17 @@ export default function UserProfilePage() {
       .catch(() => {});
 
     api
-      .get<HistoryItem[]>(`/profile/user/${userId}/history`)
-      .then((r) => setHistory(r.data))
+      .get<ChartStats>(`/profile/user/${userId}/chart-stats`)
+      .then((r) => setChartStats(r.data))
       .catch(() => {});
-  }, [userId]);
+
+    if (canSeeHistory) {
+      api
+        .get<HistoryItem[]>(`/profile/user/${userId}/history`)
+        .then((r) => setHistory(r.data))
+        .catch(() => {});
+    }
+  }, [userId, canSeeHistory]);
 
   if (error) return <div className="text-center py-20 text-red-500">{error}</div>;
   if (!profileUser)
@@ -100,72 +114,48 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      {stats && Object.keys(stats.stats_by_type).length > 0 && (
+      {chartStats && (
         <Card className="mb-8">
           <CardHeader>
-            <h2 className="font-bold">Статистика по типам</h2>
+            <h2 className="font-bold">Статистика (гистограммы)</h2>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {Object.entries(stats.stats_by_type)
-                .sort(([a], [b]) => +a - +b)
-                .map(([typeKey, data]) => {
-                  const typeNum = parseInt(typeKey);
-                  const accuracy =
-                    data.attempts > 0
-                      ? Math.round((data.correct / data.attempts) * 100)
-                      : 0;
-                  return (
-                    <div
-                      key={typeKey}
-                      className="p-3 bg-gray-50 rounded-lg text-center"
-                    >
-                      <p className="text-xs text-gray-500">
-                        №{typeKey} {TYPE_NAMES[typeNum] || '???'}
-                      </p>
-                      <p className="text-lg font-bold">{accuracy}%</p>
-                      <p className="text-xs text-gray-400">
-                        {data.correct}/{data.attempts}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
+            <StatsCharts chartStats={chartStats} />
           </CardContent>
         </Card>
       )}
 
-      {history.length > 0 && (
-        <Card>
+      {canSeeHistory && history.length > 0 && (
+        <Card className="mb-8">
           <CardHeader>
-            <h2 className="font-bold">Последние ответы</h2>
+            <h2 className="font-bold">История решений</h2>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {history.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                  className="flex items-center justify-between text-sm border-b pb-2"
                 >
-                  <span className="text-sm">
-                    Задание #{item.task_id} — &quot;{item.answer}
-                    &quot;
+                  <span>Задание #{item.task_id}</span>
+                  <span className="text-gray-500">{item.answer}</span>
+                  <span className={item.is_correct ? 'text-green-600' : 'text-red-500'}>
+                    {item.is_correct ? '✓' : '✗'}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-sm font-semibold ${item.is_correct ? 'text-green-600' : 'text-red-600'}`}
-                    >
-                      {item.is_correct ? '✅' : '❌'}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {formatDateTime(item.created_at)}
-                    </span>
-                  </div>
+                  <span className="text-gray-400 text-xs">
+                    {formatDateTime(item.created_at)}
+                  </span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {!canSeeHistory && (
+        <p className="text-gray-400 text-sm text-center">
+          История решений доступна только владельцу профиля, учителям и администраторам.
+        </p>
       )}
     </div>
   );
