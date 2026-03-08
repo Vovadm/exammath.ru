@@ -39,6 +39,7 @@ async def create_variant(
         description=data.description,
         created_by=current_user.id,
         class_id=data.class_id,
+        is_public=data.is_public,
     )
     db.add(variant)
     await db.commit()
@@ -217,6 +218,7 @@ async def _variant_to_response(
         description=variant.description,
         created_by=variant.created_by,
         class_id=variant.class_id,
+        is_public=variant.is_public,
         created_at=variant.created_at,
         tasks=tasks,
     )
