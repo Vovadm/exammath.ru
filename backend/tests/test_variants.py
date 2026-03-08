@@ -42,7 +42,9 @@ class TestVariantDetail:
         )
         variant_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/variants/{variant_id}")
+        resp = await client.get(
+            f"/api/variants/{variant_id}", headers=auth_headers(token)
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["title"] == "Детальный"
@@ -66,7 +68,9 @@ class TestVariantDetail:
         )
         variant_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/variants/{variant_id}")
+        resp = await client.get(
+            f"/api/variants/{variant_id}", headers=auth_headers(token)
+        )
         tasks = resp.json()["tasks"]
         assert tasks[0]["id"] == t3.id
         assert tasks[1]["id"] == t1.id
@@ -107,6 +111,21 @@ class TestVariantPermissions:
 
     async def test_anonymous_cannot_list_variants(self, client):
         resp = await client.get("/api/variants")
+        assert resp.status_code == 401
+
+    async def test_anonymous_cannot_get_variant(
+        self, client, admin, db_session
+    ):
+        _, token = admin
+        task = await make_task(db_session)
+        create_resp = await client.post(
+            "/api/variants",
+            json={"title": "Анон", "task_ids": [task.id]},
+            headers=auth_headers(token),
+        )
+        variant_id = create_resp.json()["id"]
+
+        resp = await client.get(f"/api/variants/{variant_id}")
         assert resp.status_code == 401
 
 

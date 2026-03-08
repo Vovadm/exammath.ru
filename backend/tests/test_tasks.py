@@ -149,7 +149,10 @@ class TestVariants:
         )
         assert del_resp.status_code == 200
 
-        get_resp = await client.get(f"/api/variants/{variant_id}")
+        get_resp = await client.get(
+            f"/api/variants/{variant_id}",
+            headers=auth_headers(token),
+        )
         assert get_resp.status_code == 404
 
 

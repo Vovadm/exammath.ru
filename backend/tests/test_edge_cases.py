@@ -16,8 +16,11 @@ class Test404:
         resp = await client.get("/api/profile/user/999999")
         assert resp.status_code == 404
 
-    async def test_variant_not_found(self, client):
-        resp = await client.get("/api/variants/999999")
+    async def test_variant_not_found(self, client, admin):
+        _, token = admin
+        resp = await client.get(
+            "/api/variants/999999", headers=auth_headers(token)
+        )
         assert resp.status_code == 404
 
     async def test_class_not_found(self, client, admin):
