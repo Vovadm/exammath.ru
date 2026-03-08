@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import api, { ChartStats, User, UserStats } from '@/lib/api';
+import api, { TypeStatItem, User, UserStats } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatDateTime } from '@/lib/format-date';
-import { StatsCharts } from '@/components/stats-charts';
+import StatsChart from '@/components/stats-charts';
 
 interface HistoryItem {
   id: number;
@@ -22,7 +21,7 @@ export default function UserProfilePage() {
   const params = useParams();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [chartStats, setChartStats] = useState<ChartStats | null>(null);
+  const [typeStats, setTypeStats] = useState<TypeStatItem[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [error, setError] = useState('');
 
@@ -47,8 +46,8 @@ export default function UserProfilePage() {
       .catch(() => {});
 
     api
-      .get<ChartStats>(`/profile/user/${userId}/chart-stats`)
-      .then((r) => setChartStats(r.data))
+      .get<TypeStatItem[]>(`/profile/user/${userId}/type-stats`)
+      .then((r) => setTypeStats(r.data))
       .catch(() => {});
 
     if (canSeeHistory) {
@@ -114,36 +113,34 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      {chartStats && (
-        <Card className="mb-8">
-          <CardHeader>
-            <h2 className="font-bold">Статистика (гистограммы)</h2>
-          </CardHeader>
-          <CardContent>
-            <StatsCharts chartStats={chartStats} />
-          </CardContent>
-        </Card>
-      )}
+      <Card className="mb-8">
+        <CardHeader>
+          <h2 className="font-bold">Статистика по типам задач</h2>
+        </CardHeader>
+        <CardContent>
+          <StatsChart items={typeStats} />
+        </CardContent>
+      </Card>
 
       {canSeeHistory && history.length > 0 && (
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
-            <h2 className="font-bold">История решений</h2>
+            <h2 className="font-bold">Последние ответы</h2>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               {history.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between text-sm border-b pb-2"
+                  className="flex items-center gap-3 text-sm border-b pb-2"
                 >
-                  <span>Задание #{item.task_id}</span>
-                  <span className="text-gray-500">{item.answer}</span>
                   <span className={item.is_correct ? 'text-green-600' : 'text-red-500'}>
                     {item.is_correct ? '✓' : '✗'}
                   </span>
-                  <span className="text-gray-400 text-xs">
-                    {formatDateTime(item.created_at)}
+                  <span className="text-gray-700">Задание #{item.task_id}</span>
+                  <span className="text-gray-500">Ответ: {item.answer ?? '—'}</span>
+                  <span className="text-gray-400 ml-auto">
+                    {new Date(item.created_at).toLocaleDateString('ru-RU')}
                   </span>
                 </div>
               ))}
@@ -153,8 +150,9 @@ export default function UserProfilePage() {
       )}
 
       {!canSeeHistory && (
-        <p className="text-gray-400 text-sm text-center">
-          История решений доступна только владельцу профиля, учителям и администраторам.
+        <p className="text-gray-400 text-sm text-center mt-4">
+          История ответов доступна только самому пользователю, учителям и
+          администраторам.
         </p>
       )}
     </div>

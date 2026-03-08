@@ -30,6 +30,11 @@ class Token(BaseModel):
     token_type: str
 
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
 class TaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -133,14 +138,11 @@ class UserStatsResponse(BaseModel):
     stats_by_type: dict[str, Any] = Field(default_factory=dict)
 
 
-class ChartStatsResponse(BaseModel):
-    solved_by_type: dict[str, int] = Field(default_factory=dict)
-    success_rate_by_type: dict[str, float] = Field(default_factory=dict)
-
-
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
+class TypeStatItem(BaseModel):
+    task_type: int
+    attempts: int
+    correct: int
+    success_rate: float
 
 
 class ClassCreate(BaseModel):
@@ -174,12 +176,10 @@ class ClassResponse(BaseModel):
     members: list[ClassMemberResponse] = Field(default_factory=list)
 
 
-class VariantStudentTaskView(BaseModel):
-    task: TaskResponse
-    solution: Optional[SolutionResponse] = None
-
-
-class VariantStudentView(BaseModel):
-    variant: VariantResponse
-    student: UserResponse
-    task_views: list[VariantStudentTaskView] = Field(default_factory=list)
+class VariantStudentSolutionResponse(BaseModel):
+    task_id: int
+    task_type: int
+    answer: Optional[str] = None
+    is_correct: Optional[bool] = None
+    content: list[Any] = Field(default_factory=list)
+    files: list[SolutionFileResponse] = Field(default_factory=list)

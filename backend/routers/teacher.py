@@ -18,6 +18,7 @@ from backend.schemas import (
     ClassMemberResponse,
     ClassResponse,
     TaskResponse,
+    UserResponse,
     VariantCreate,
     VariantResponse,
 )
@@ -68,15 +69,49 @@ async def get_my_classes(
     ]
 
 
+@router.get("/classes/{class_id}/students", response_model=list[UserResponse])
+async def get_class_students(
+    class_id: int,
+    current_user: TeacherOrAdmin,
+    db: DbSession,
+) -> list[UserResponse]:
+    sc_result = await db.execute(
+        select(SchoolClass).where(SchoolClass.id == class_id)
+    )
+    sc = sc_result.scalar_one_or_none()
+    if not sc:
+        raise HTTPException(404, "Класс не найден")
+
+    if current_user.role == "teacher":
+        member_check = await db.execute(
+            select(ClassMember).where(
+                ClassMember.class_id == class_id,
+                ClassMember.user_id == current_user.id,
+                ClassMember.role == "teacher",
+            )
+        )
+        if not member_check.scalar_one_or_none():
+            raise HTTPException(403, "Нет доступа к этому классу")
+
+    result = await db.execute(
+        select(User)
+        .join(ClassMember)
+        .where(
+            ClassMember.class_id == class_id,
+            ClassMember.role == "student",
+        )
+    )
+    users = result.scalars().all()
+    return [UserResponse.model_validate(u) for u in users]
+
+
 @router.post("/variants", response_model=VariantResponse)
 async def create_variant(
     data: VariantCreate,
     current_user: TeacherOrAdmin,
     db: DbSession,
 ) -> VariantResponse:
-    from backend.models import Variant as VariantModel
-
-    variant = VariantModel(
+    variant = Variant(
         title=data.title,
         description=data.description,
         created_by=current_user.id,

@@ -1,136 +1,113 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import api, { VariantStudentView, API_BASE } from '@/lib/api';
+import api, { API_BASE, TYPE_NAMES, Variant, VariantStudentSolution } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
-export default function StudentVariantViewPage() {
+export default function VariantStudentViewPage() {
   const { user } = useAuth();
   const params = useParams();
-  const router = useRouter();
-  const [data, setData] = useState<VariantStudentView | null>(null);
-  const [error, setError] = useState('');
-
   const variantId = params.id as string;
   const studentId = params.studentId as string;
+
+  const [variant, setVariant] = useState<Variant | null>(null);
+  const [solutions, setSolutions] = useState<VariantStudentSolution[]>([]);
+  const [studentName, setStudentName] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!user) return;
     if (user.role !== 'admin' && user.role !== 'teacher') {
-      router.push('/');
+      setError('Нет доступа');
       return;
     }
-    api
-      .get<VariantStudentView>(`/variants/${variantId}/student-view/${studentId}`)
-      .then((r) => setData(r.data))
-      .catch(() => setError('Не удалось загрузить данные'));
-  }, [user, variantId, studentId, router]);
 
-  if (!user || (user.role !== 'admin' && user.role !== 'teacher')) {
-    return <div className="text-center py-20 text-red-500">Нет доступа</div>;
-  }
+    api
+      .get<Variant>(`/variants/${variantId}`)
+      .then((r) => setVariant(r.data))
+      .catch(() => setError('Вариант не найден'));
+
+    api
+      .get<{ username: string }>(`/profile/user/${studentId}`)
+      .then((r) => setStudentName(r.data.username))
+      .catch(() => {});
+
+    api
+      .get<VariantStudentSolution[]>(
+        `/variants/${variantId}/student/${studentId}/solutions`,
+      )
+      .then((r) => setSolutions(r.data))
+      .catch(() => setError('Ошибка загрузки решений'));
+  }, [user, variantId, studentId]);
 
   if (error) return <div className="text-center py-20 text-red-500">{error}</div>;
-  if (!data) return <div className="text-center py-20 text-gray-500">Загрузка...</div>;
+  if (!variant)
+    return <div className="text-center py-20 text-gray-500">Загрузка...</div>;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          ← Назад
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {data.variant.title} — {data.student.username}
-        </h1>
-      </div>
+      <h1 className="text-2xl font-bold mb-2">{variant.title}</h1>
+      <p className="text-gray-500 mb-6">
+        Ответы ученика: <strong>{studentName || `#${studentId}`}</strong>
+      </p>
 
-      <Card className="mb-6">
-        <CardContent className="pt-4 flex gap-6 text-sm">
-          <div>
-            <span className="text-gray-500">Ученик: </span>
-            <span className="font-medium">{data.student.username}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Email: </span>
-            <span>{data.student.email}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Заданий: </span>
-            <span>{data.task_views.length}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Решено: </span>
-            <span>{data.task_views.filter((tv) => tv.solution).length}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
-        {data.task_views.map((tv, idx) => (
-          <Card key={tv.task.id}>
+      <div className="flex flex-col gap-4">
+        {solutions.map((sol, idx) => (
+          <Card key={sol.task_id}>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">
-                  Задание {idx + 1} (тип {tv.task.task_type})
-                </h2>
-                {tv.solution ? (
-                  <Badge
-                    className={
-                      tv.solution.is_correct
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }
-                  >
-                    {tv.solution.is_correct ? 'Верно' : 'Неверно'}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Не решено</Badge>
+              <h2 className="font-semibold">
+                Задание {idx + 1} —{' '}
+                {TYPE_NAMES[sol.task_type] ?? `Тип ${sol.task_type}`}
+              </h2>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">Ответ:</span>
+                <span className="font-mono text-sm">
+                  {sol.answer ?? <em className="text-gray-400">не указан</em>}
+                </span>
+                {sol.is_correct !== undefined && sol.is_correct !== null && (
+                  <span className={sol.is_correct ? 'text-green-600' : 'text-red-500'}>
+                    {sol.is_correct ? '✓ Верно' : '✗ Неверно'}
+                  </span>
                 )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-700 mb-3">{tv.task.text}</p>
 
-              {tv.solution ? (
-                <div className="bg-gray-50 rounded p-3 text-sm space-y-2">
-                  <div>
-                    <span className="text-gray-500">Ответ ученика: </span>
-                    <span className="font-medium">{tv.solution.answer ?? '—'}</span>
-                  </div>
-                  {tv.task.answer && (
-                    <div>
-                      <span className="text-gray-500">Правильный ответ: </span>
-                      <span className="font-medium text-green-700">
-                        {tv.task.answer}
-                      </span>
+              {sol.content && sol.content.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Решение:</p>
+                  {sol.content.map((c, i) => (
+                    <div key={i} className="text-sm text-gray-700">
+                      {c.type === 'text' && <p>{c.value}</p>}
                     </div>
-                  )}
-                  {tv.solution.files && tv.solution.files.length > 0 && (
-                    <div>
-                      <p className="text-gray-500 mb-1">Прикреплённые файлы:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {tv.solution.files.map((f) => (
-                          <a
-                            key={f.id}
-                            href={`${API_BASE}/${f.filepath}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-indigo-600 underline text-xs"
-                          >
-                            {f.filename}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ) : (
-                <p className="text-gray-400 text-sm italic">
-                  Ученик не решал это задание
+              )}
+
+              {sol.files && sol.files.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Файлы:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sol.files.map((f) => (
+                      <a
+                        key={f.id}
+                        href={`${API_BASE}/uploads/${f.filepath}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-indigo-600 hover:underline border rounded px-2 py-1"
+                      >
+                        {f.filename}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!sol.answer && (!sol.content || sol.content.length === 0) && (
+                <p className="text-sm text-gray-400 italic">
+                  Ученик не приступал к заданию
                 </p>
               )}
             </CardContent>

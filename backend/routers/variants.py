@@ -6,16 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import get_current_user, require_role
 from backend.database import get_db
-from backend.models import Solution, Task, User, Variant, VariantItem
+from backend.models import (
+    ClassMember,
+    Solution,
+    Task,
+    User,
+    Variant,
+    VariantItem,
+)
 from backend.schemas import (
     SolutionFileResponse,
-    SolutionResponse,
     TaskResponse,
-    UserResponse,
     VariantCreate,
     VariantResponse,
-    VariantStudentTaskView,
-    VariantStudentView,
+    VariantStudentSolutionResponse,
 )
 
 router = APIRouter(prefix="/api/variants", tags=["variants"])
@@ -35,7 +39,6 @@ async def create_variant(
         description=data.description,
         created_by=current_user.id,
         class_id=data.class_id,
-        is_public=data.is_public,
     )
     db.add(variant)
     await db.commit()
@@ -59,14 +62,26 @@ async def get_variants(
     db: DbSession,
     current_user: CurrentUser,
 ) -> list[VariantResponse]:
-    result = await db.execute(select(Variant))
-    variants = result.scalars().all()
+    if current_user.role in ("admin", "teacher"):
+        result = await db.execute(select(Variant))
+        variants = result.scalars().all()
+    else:
+        class_result = await db.execute(
+            select(ClassMember.class_id).where(
+                ClassMember.user_id == current_user.id
+            )
+        )
+        class_ids = [row[0] for row in class_result.all()]
 
-    accessible: list[VariantResponse] = []
-    for v in variants:
-        if _can_access_variant(v, current_user):
-            accessible.append(await _variant_to_response(v, db))
-    return accessible
+        if not class_ids:
+            return []
+
+        result = await db.execute(
+            select(Variant).where(Variant.class_id.in_(class_ids))
+        )
+        variants = result.scalars().all()
+
+    return [await _variant_to_response(v, db) for v in variants]
 
 
 @router.get("/{variant_id}", response_model=VariantResponse)
@@ -79,9 +94,90 @@ async def get_variant(
     variant = result.scalar_one_or_none()
     if not variant:
         raise HTTPException(404, "Вариант не найден")
-    if not _can_access_variant(variant, current_user):
-        raise HTTPException(403, "Нет доступа к этому варианту")
+
+    if current_user.role not in ("admin", "teacher"):
+        if variant.class_id is not None:
+            member_result = await db.execute(
+                select(ClassMember).where(
+                    ClassMember.user_id == current_user.id,
+                    ClassMember.class_id == variant.class_id,
+                )
+            )
+            if not member_result.scalar_one_or_none():
+                raise HTTPException(403, "Нет доступа к этому варианту")
+
     return await _variant_to_response(variant, db)
+
+
+@router.get(
+    "/{variant_id}/student/{student_id}/solutions",
+    response_model=list[VariantStudentSolutionResponse],
+)
+async def get_variant_student_solutions(
+    variant_id: int,
+    student_id: int,
+    current_user: AdminOrTeacher,
+    db: DbSession,
+) -> list[VariantStudentSolutionResponse]:
+    result = await db.execute(select(Variant).where(Variant.id == variant_id))
+    variant = result.scalar_one_or_none()
+    if not variant:
+        raise HTTPException(404, "Вариант не найден")
+
+    student_result = await db.execute(
+        select(User).where(User.id == student_id)
+    )
+    if not student_result.scalar_one_or_none():
+        raise HTTPException(404, "Пользователь не найден")
+
+    responses: list[VariantStudentSolutionResponse] = []
+    for item in variant.items:
+        task_result = await db.execute(
+            select(Task).where(Task.id == item.task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            continue
+
+        sol_result = await db.execute(
+            select(Solution)
+            .where(
+                Solution.user_id == student_id,
+                Solution.task_id == item.task_id,
+            )
+            .order_by(Solution.created_at.desc())
+        )
+        solution = sol_result.scalar_one_or_none()
+
+        if solution:
+            files = [
+                SolutionFileResponse(
+                    id=f.id,
+                    filename=f.filename,
+                    filepath=f.filepath,
+                    file_type=f.file_type,
+                )
+                for f in (solution.files or [])
+            ]
+            responses.append(
+                VariantStudentSolutionResponse(
+                    task_id=item.task_id,
+                    task_type=task.task_type,
+                    answer=solution.answer,
+                    is_correct=solution.is_correct,
+                    content=solution.content or [],
+                    files=files,
+                )
+            )
+        else:
+            responses.append(
+                VariantStudentSolutionResponse(
+                    task_id=item.task_id,
+                    task_type=task.task_type,
+                )
+            )
+
+    return responses
 
 
 @router.delete("/{variant_id}")
@@ -106,100 +202,6 @@ async def delete_variant(
     return {"ok": True}
 
 
-@router.get(
-    "/{variant_id}/student-view/{student_id}",
-    response_model=VariantStudentView,
-)
-async def get_variant_student_view(
-    variant_id: int,
-    student_id: int,
-    current_user: AdminOrTeacher,
-    db: DbSession,
-) -> VariantStudentView:
-    variant_result = await db.execute(
-        select(Variant).where(Variant.id == variant_id)
-    )
-    variant = variant_result.scalar_one_or_none()
-    if not variant:
-        raise HTTPException(404, "Вариант не найден")
-
-    student_result = await db.execute(
-        select(User).where(User.id == student_id)
-    )
-    student = student_result.scalar_one_or_none()
-    if not student:
-        raise HTTPException(404, "Студент не найден")
-
-    task_views: list[VariantStudentTaskView] = []
-    for item in variant.items:
-        task_result = await db.execute(
-            select(Task).where(Task.id == item.task_id)
-        )
-        task = task_result.scalar_one_or_none()
-        if not task:
-            continue
-
-        solution_result = await db.execute(
-            select(Solution)
-            .where(
-                Solution.user_id == student_id,
-                Solution.task_id == item.task_id,
-            )
-            .order_by(Solution.created_at.desc())
-        )
-        solution = solution_result.scalars().first()
-
-        solution_resp: SolutionResponse | None = None
-        if solution:
-            files = [
-                SolutionFileResponse(
-                    id=f.id,
-                    filename=f.filename,
-                    filepath=f.filepath,
-                    file_type=f.file_type,
-                )
-                for f in (solution.files or [])
-            ]
-            solution_resp = SolutionResponse(
-                id=solution.id,
-                user_id=solution.user_id,
-                task_id=solution.task_id,
-                answer=solution.answer,
-                is_correct=solution.is_correct,
-                content=solution.content or [],
-                files=files,
-                created_at=solution.created_at,
-                updated_at=solution.updated_at,
-                username=student.username,
-            )
-
-        task_views.append(
-            VariantStudentTaskView(
-                task=TaskResponse.model_validate(task),
-                solution=solution_resp,
-            )
-        )
-
-    return VariantStudentView(
-        variant=await _variant_to_response(variant, db),
-        student=UserResponse.model_validate(student),
-        task_views=task_views,
-    )
-
-
-def _can_access_variant(variant: Variant, user: User) -> bool:
-    if user.role in ("admin", "teacher"):
-        return True
-    if variant.is_public:
-        return True
-    if variant.class_id is None:
-        return False
-    for membership in user.class_memberships:
-        if membership.class_id == variant.class_id:
-            return True
-    return False
-
-
 async def _variant_to_response(
     variant: Variant, db: AsyncSession
 ) -> VariantResponse:
@@ -215,7 +217,6 @@ async def _variant_to_response(
         description=variant.description,
         created_by=variant.created_by,
         class_id=variant.class_id,
-        is_public=variant.is_public,
         created_at=variant.created_at,
         tasks=tasks,
     )
