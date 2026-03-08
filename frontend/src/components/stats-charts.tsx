@@ -1,6 +1,6 @@
 'use client';
 
-import { ChartStats, TYPE_NAMES } from '@/lib/api';
+import { ChartStats } from '@/lib/api';
 
 interface Props {
   chartStats: ChartStats;
