@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   ],
   metadataBase: new URL('https://exammath.ru'),
   alternates: { canonical: '/' },
+  icons: {
+    icon: '/favicon.png',
+  },
   openGraph: {
     type: 'website',
     locale: 'ru_RU',

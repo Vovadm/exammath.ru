@@ -1,199 +1,220 @@
 'use client';
 
-import { useState } from 'react';
-import api, { Task, TaskListResponse } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import api, { SchoolClass, Variant } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 export default function AdminVariants() {
+  const router = useRouter();
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [tab, setTab] = useState<'variants' | 'create'>('variants');
+  const [expandedVariant, setExpandedVariant] = useState<number | null>(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [taskIds, setTaskIds] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Task[]>([]);
-  const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [taskIdsRaw, setTaskIdsRaw] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
+  const [createMsg, setCreateMsg] = useState('');
+  const [createLoading, setCreateLoading] = useState(false);
 
-  const searchTasks = async () => {
-    if (!searchQuery.trim()) return;
+  useEffect(() => {
+    api.get<Variant[]>('/teacher/variants').then((r) => setVariants(r.data));
+    api.get<SchoolClass[]>('/teacher/classes').then((r) => setClasses(r.data));
+  }, []);
+
+  const handleCreate = async () => {
+    setCreateLoading(true);
+    setCreateMsg('');
     try {
-      const r = await api.get<TaskListResponse>('/tasks', {
-        params: { search: searchQuery, per_page: 20 },
-      });
-      setSearchResults(r.data.tasks);
-    } catch {
-      /* */
-    }
-  };
-
-  const addTask = (task: Task) => {
-    if (!selectedTasks.find((t) => t.id === task.id)) {
-      setSelectedTasks([...selectedTasks, task]);
-    }
-  };
-
-  const removeTask = (taskId: number) => {
-    setSelectedTasks(selectedTasks.filter((t) => t.id !== taskId));
-  };
-
-  const createVariant = async () => {
-    setError('');
-    setSuccess('');
-    if (!title.trim()) {
-      setError('Введите название');
-      return;
-    }
-    let ids = selectedTasks.map((t) => t.id);
-    if (taskIds.trim()) {
-      const manual = taskIds
+      const taskIds = taskIdsRaw
         .split(',')
-        .map((s) => parseInt(s.trim()))
+        .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !isNaN(n));
-      ids = [...ids, ...manual];
-    }
-    if (ids.length === 0) {
-      setError('Добавьте хотя бы одно задание');
-      return;
-    }
-    try {
-      await api.post('/variants', {
+
+      const r = await api.post<Variant>('/teacher/variants', {
         title,
         description: description || null,
-        task_ids: ids,
+        task_ids: taskIds,
+        class_id: selectedClassId,
+        is_public: isPublic,
       });
-      setSuccess(`Вариант "${title}" создан!`);
+      setVariants((prev) => [r.data, ...prev]);
       setTitle('');
       setDescription('');
-      setTaskIds('');
-      setSelectedTasks([]);
-      setSearchResults([]);
-    } catch {
-      setError('Ошибка создания варианта');
+      setTaskIdsRaw('');
+      setSelectedClassId(null);
+      setIsPublic(false);
+      setCreateMsg('Вариант создан успешно');
+      setTab('variants');
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      setCreateMsg(err?.response?.data?.detail || 'Ошибка при создании');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <h2 className="font-bold">Создать вариант</h2>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label>Название</Label>
-          <Input
-            value={title}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setTitle(e.target.value)
-            }
-            placeholder="Вариант 1 — тренировочный"
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Описание (необязательно)</Label>
-          <textarea
-            className="w-full min-h-[60px] p-3 border rounded-lg text-sm resize-y mt-1"
-            value={description}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setDescription(e.target.value)
-            }
-          />
-        </div>
-        <div>
-          <Label>Поиск заданий</Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearchQuery(e.target.value)
-              }
-              placeholder="Поиск по тексту задания..."
-              onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && searchTasks()}
-              className="flex-1"
-            />
-            <Button variant="outline" onClick={searchTasks}>
-              Найти
-            </Button>
-          </div>
-        </div>
-
-        {searchResults.length > 0 && (
-          <div className="border rounded-lg max-h-60 overflow-y-auto">
-            {searchResults.map((task) => {
-              const isSelected = selectedTasks.some((t) => t.id === task.id);
-              return (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-mono text-gray-400 mr-2">
-                      #{task.id}
-                    </span>
-                    <Badge variant="outline" className="mr-2">
-                      №{task.task_type}
-                    </Badge>
-                    <span className="text-sm text-gray-700">
-                      {task.text.substring(0, 80)}...
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={isSelected ? 'secondary' : 'outline'}
-                    onClick={() => (isSelected ? removeTask(task.id) : addTask(task))}
-                  >
-                    {isSelected ? '✓' : '+'}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {selectedTasks.length > 0 && (
-          <div>
-            <Label>Выбрано ({selectedTasks.length})</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {selectedTasks.map((task, i) => (
-                <Badge
-                  key={task.id}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-red-100 transition"
-                  onClick={() => removeTask(task.id)}
-                >
-                  {i + 1}. #{task.id} (№{task.task_type}) ✕
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <Label>Или ID заданий вручную (через запятую)</Label>
-          <Input
-            value={taskIds}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setTaskIds(e.target.value)
-            }
-            placeholder="1, 5, 12, 34"
-            className="mt-1"
-          />
-        </div>
-
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-600 text-sm font-semibold">{success}</p>}
-
+    <div className="space-y-4">
+      <div className="flex gap-3 mb-4">
         <Button
-          onClick={createVariant}
-          className="bg-indigo-600 text-white hover:bg-indigo-700"
+          variant={tab === 'variants' ? 'default' : 'outline'}
+          onClick={() => setTab('variants')}
+        >
+          Все варианты
+        </Button>
+        <Button
+          variant={tab === 'create' ? 'default' : 'outline'}
+          onClick={() => setTab('create')}
         >
           Создать вариант
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+
+      {tab === 'variants' && (
+        <div className="space-y-4">
+          {variants.length === 0 && (
+            <p className="text-gray-500 text-center py-10">Вариантов пока нет</p>
+          )}
+          {variants.map((v) => {
+            const variantClass = classes.find((c) => c.id === v.class_id);
+            const students = variantClass?.members ?? [];
+            const isExpanded = expandedVariant === v.id;
+
+            return (
+              <Card key={v.id}>
+                <CardContent className="pt-4 flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold">{v.title}</p>
+                    {v.description && (
+                      <p className="text-sm text-gray-500">{v.description}</p>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      {v.is_public && <Badge variant="secondary">Публичный</Badge>}
+                      {v.class_id && (
+                        <Badge variant="outline">
+                          Класс: {variantClass?.name ?? v.class_id}
+                        </Badge>
+                      )}
+                      <Badge variant="outline">{v.tasks.length} заданий</Badge>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/variants/${v.id}`)}
+                    >
+                      Открыть
+                    </Button>
+                    {students.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setExpandedVariant(isExpanded ? null : v.id)}
+                      >
+                        Ответы учеников
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+                {isExpanded && students.length > 0 && (
+                  <CardContent className="pt-0 pb-4">
+                    <p className="text-xs text-gray-500 mb-2">Выберите ученика:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {students.map((s) => (
+                        <Button
+                          key={s.user_id}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            router.push(`/variants/${v.id}/student/${s.user_id}`)
+                          }
+                        >
+                          {s.username}
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'create' && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-bold">Новый вариант</h2>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 max-w-lg">
+            <Input
+              placeholder="Название варианта"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <Input
+              placeholder="Описание (необязательно)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <Input
+              placeholder="ID заданий через запятую: 1, 2, 3"
+              value={taskIdsRaw}
+              onChange={(e) => setTaskIdsRaw(e.target.value)}
+            />
+            <div>
+              <label className="text-sm font-medium mb-1 block">Класс</label>
+              <select
+                className="border rounded px-3 py-2 text-sm w-full"
+                value={selectedClassId ?? ''}
+                onChange={(e) =>
+                  setSelectedClassId(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">Без класса</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              Публичный вариант
+            </label>
+            {createMsg && (
+              <p
+                className={
+                  createMsg.includes('успешно')
+                    ? 'text-green-600 text-sm'
+                    : 'text-red-500 text-sm'
+                }
+              >
+                {createMsg}
+              </p>
+            )}
+            <Button
+              onClick={handleCreate}
+              disabled={createLoading || !title || !taskIdsRaw}
+            >
+              {createLoading ? 'Создаём...' : 'Создать'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

@@ -15,6 +15,7 @@ export default function TeacherPage() {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [tab, setTab] = useState<'variants' | 'create'>('variants');
+  const [expandedVariant, setExpandedVariant] = useState<number | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -94,35 +95,70 @@ export default function TeacherPage() {
           {variants.length === 0 && (
             <p className="text-gray-500 text-center py-10">Вариантов пока нет</p>
           )}
-          {variants.map((v) => (
-            <Card key={v.id}>
-              <CardContent className="pt-4 flex items-start justify-between">
-                <div>
-                  <p className="font-semibold">{v.title}</p>
-                  {v.description && (
-                    <p className="text-sm text-gray-500">{v.description}</p>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    {v.is_public && <Badge variant="secondary">Публичный</Badge>}
-                    {v.class_id && (
-                      <Badge variant="outline">
-                        Класс:{' '}
-                        {classes.find((c) => c.id === v.class_id)?.name ?? v.class_id}
-                      </Badge>
+          {variants.map((v) => {
+            const variantClass = classes.find((c) => c.id === v.class_id);
+            const students = variantClass?.members ?? [];
+            const isExpanded = expandedVariant === v.id;
+
+            return (
+              <Card key={v.id}>
+                <CardContent className="pt-4 flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold">{v.title}</p>
+                    {v.description && (
+                      <p className="text-sm text-gray-500">{v.description}</p>
                     )}
-                    <Badge variant="outline">{v.tasks.length} заданий</Badge>
+                    <div className="flex gap-2 mt-2">
+                      {v.is_public && <Badge variant="secondary">Публичный</Badge>}
+                      {v.class_id && (
+                        <Badge variant="outline">
+                          Класс: {variantClass?.name ?? v.class_id}
+                        </Badge>
+                      )}
+                      <Badge variant="outline">{v.tasks.length} заданий</Badge>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push(`/variants/${v.id}`)}
-                >
-                  Открыть
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/variants/${v.id}`)}
+                    >
+                      Открыть
+                    </Button>
+                    {students.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setExpandedVariant(isExpanded ? null : v.id)}
+                      >
+                        Ответы учеников
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+                {isExpanded && students.length > 0 && (
+                  <CardContent className="pt-0 pb-4">
+                    <p className="text-xs text-gray-500 mb-2">Выберите ученика:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {students.map((s) => (
+                        <Button
+                          key={s.user_id}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            router.push(`/variants/${v.id}/student/${s.user_id}`)
+                          }
+                        >
+                          {s.username}
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
 
