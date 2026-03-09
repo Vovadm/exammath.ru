@@ -69,9 +69,12 @@ class TestLoginEdgeCases:
             },
         )
         assert reg_resp.status_code == 200
-        token = reg_resp.json()["access_token"]
+        cookie = reg_resp.cookies.get("access_token")
+        assert cookie is not None, "Cookie access_token не установлена"
 
-        me_resp = await client.get("/api/auth/me", headers=auth_headers(token))
+        me_resp = await client.get(
+            "/api/auth/me", headers=auth_headers(cookie)
+        )
         assert me_resp.status_code == 200
         assert me_resp.json()["username"] == username
         assert me_resp.json()["role"] == "student"

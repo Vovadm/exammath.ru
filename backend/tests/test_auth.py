@@ -30,8 +30,9 @@ class TestRegistration:
             print(f"Response status: {resp.status_code}, body: {resp.text}")
         assert resp.status_code == 200
         data = resp.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
+        assert "id" in data
+        assert "username" in data
+        assert "set-cookie" in resp.headers
 
     @pytest.mark.asyncio
     async def test_register_duplicate_username(self, client):
@@ -206,4 +207,5 @@ class TestPasswords:
             json={"username": username, "password": "GoodPass1"},
         )
         assert resp.status_code == 200
-        assert "access_token" in resp.json()
+        assert "id" in resp.json()
+        assert "set-cookie" in resp.headers

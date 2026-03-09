@@ -12,7 +12,7 @@ interface AuthContextType {
     password: string,
     turnstileToken?: string,
   ) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -23,36 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      api
-        .get<User>('/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((r) => {
-          setUser(r.data);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    api
+      .get<User>('/auth/me')
+      .then((r) => setUser(r.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (username: string, password: string, turnstileToken?: string) => {
-    const r = await api.post<{ access_token: string; token_type: string }>(
-      '/auth/login',
-      { username, password, turnstile_token: turnstileToken || null },
-    );
-    const token = r.data.access_token;
-    localStorage.setItem('token', token);
-
-    const me = await api.get<User>('/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
+    const r = await api.post<User>('/auth/login', {
+      username,
+      password,
+      turnstile_token: turnstileToken || null,
     });
-    setUser(me.data);
+    setUser(r.data);
   };
 
   const register = async (
@@ -61,17 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     turnstileToken?: string,
   ) => {
-    await api.post('/auth/register', {
+    const r = await api.post<User>('/auth/register', {
       username,
       email,
       password,
       turnstile_token: turnstileToken || null,
     });
-    await login(username, password, turnstileToken);
+    setUser(r.data);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    await api.post('/auth/logout');
     setUser(null);
   };
 

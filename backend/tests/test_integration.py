@@ -19,8 +19,11 @@ class TestStudentFlow:
             },
         )
         assert reg_resp.status_code == 200
-        token = reg_resp.json()["access_token"]
-        headers = auth_headers(token)
+        assert reg_resp.json()["username"] == username
+
+        cookie = reg_resp.cookies.get("access_token")
+        assert cookie is not None, "Cookie access_token не установлена"
+        headers = auth_headers(cookie)
 
         me_resp = await client.get("/api/auth/me", headers=headers)
         assert me_resp.status_code == 200

@@ -1,12 +1,13 @@
 import os
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import (
+    ACCESS_TOKEN_EXPIRE_DAYS,
     create_access_token,
     get_current_user,
     hash_password,
@@ -14,12 +15,27 @@ from backend.auth import (
 )
 from backend.database import get_db
 from backend.models import User, UserStats
-from backend.schemas import Token, UserResponse
+from backend.schemas import UserResponse
 from backend.turnstile import verify_turnstile
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+COOKIE_MAX_AGE = ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+IS_PROD = os.getenv("ENV", "production") == "production"
+
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=IS_PROD,
+        samesite="lax",
+        max_age=COOKIE_MAX_AGE,
+        path="/",
+    )
 
 
 class RegisterRequest(BaseModel):
@@ -35,8 +51,10 @@ class LoginRequest(BaseModel):
     turnstile_token: Optional[str] = None
 
 
-@router.post("/register", response_model=Token)
-async def register(data: RegisterRequest, db: DbSession) -> Token:
+@router.post("/register", response_model=UserResponse)
+async def register(
+    data: RegisterRequest, response: Response, db: DbSession
+) -> User:
     if data.turnstile_token:
         valid = await verify_turnstile(data.turnstile_token)
         if not valid:
@@ -68,11 +86,12 @@ async def register(data: RegisterRequest, db: DbSession) -> Token:
     await db.commit()
 
     token = create_access_token({"sub": user.id})
-    return Token(access_token=token, token_type="bearer")
+    set_auth_cookie(response, token)
+    return user
 
 
-@router.post("/login", response_model=Token)
-async def login(data: LoginRequest, db: DbSession) -> Token:
+@router.post("/login", response_model=UserResponse)
+async def login(data: LoginRequest, response: Response, db: DbSession) -> User:
     if data.turnstile_token:
         valid = await verify_turnstile(data.turnstile_token)
         if not valid:
@@ -88,7 +107,14 @@ async def login(data: LoginRequest, db: DbSession) -> Token:
         raise HTTPException(401, "Неверный логин или пароль")
 
     token = create_access_token({"sub": user.id})
-    return Token(access_token=token, token_type="bearer")
+    set_auth_cookie(response, token)
+    return user
+
+
+@router.post("/logout")
+async def logout(response: Response) -> dict[str, bool]:
+    response.delete_cookie(key="access_token", path="/")
+    return {"ok": True}
 
 
 @router.get("/me", response_model=UserResponse)

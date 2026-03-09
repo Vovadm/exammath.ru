@@ -3,16 +3,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   timeout: 10000,
-});
-
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
+  withCredentials: true, // отправляем cookie на каждый запрос
 });
 
 api.interceptors.response.use(
@@ -23,7 +14,6 @@ api.interceptors.response.use(
       typeof window !== 'undefined' &&
       !['/login', '/register', '/tasks', '/'].includes(window.location.pathname)
     ) {
-      localStorage.removeItem('token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
