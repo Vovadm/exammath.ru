@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { Task, TYPE_NAMES } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import http from '@/shared/api/http';
+import { TYPE_NAMES } from '@/shared/config/task-types';
 import { formatMath } from '@/lib/math-format';
+import type { Task } from '@/entities/task/model/types';
 
 interface EditTaskModalProps {
   task: Task;
@@ -15,29 +17,26 @@ interface EditTaskModalProps {
 }
 
 export default function EditTaskModal({ task, onClose, onSaved }: EditTaskModalProps) {
-  const isPart2Default = task.task_type >= 13 && task.task_type <= 19;
   const [text, setText] = useState(task.text);
-  const [answer, setAnswer] = useState(task.answer || '');
+  const [answer, setAnswer] = useState(task.answer ?? '');
   const [taskType, setTaskType] = useState(task.task_type);
-  const [hint, setHint] = useState(task.hint || '');
-  const [hasAnswer, setHasAnswer] = useState(isPart2Default ? !!task.answer : true);
+  const [hint, setHint] = useState(task.hint ?? '');
+  const [hasAnswer, setHasAnswer] = useState(
+    task.task_type >= 13 ? !!task.answer : true,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const newIsPart2 = taskType >= 13 && taskType <= 19;
-    if (newIsPart2 && !answer) {
-      setHasAnswer(false);
-    } else if (!newIsPart2) {
-      setHasAnswer(true);
-    }
+    if (taskType >= 13 && taskType <= 19 && !answer) setHasAnswer(false);
+    else if (taskType < 13) setHasAnswer(true);
   }, [taskType]);
 
   const handleSave = async () => {
     setSaving(true);
     setError('');
     try {
-      await api.put(`/admin/tasks/${task.id}`, {
+      await http.put(`/admin/tasks/${task.id}`, {
         text,
         answer: hasAnswer ? answer || null : null,
         task_type: taskType,
@@ -84,19 +83,19 @@ export default function EditTaskModal({ task, onClose, onSaved }: EditTaskModalP
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              №{taskType} — {TYPE_NAMES[taskType] || '???'}
+              №{taskType} — {TYPE_NAMES[taskType] ?? '???'}
             </p>
           </div>
+
           <div>
             <Label>Текст задания</Label>
             <textarea
               className="w-full min-h-[150px] p-3 border rounded-lg text-sm resize-y mt-1"
               value={text}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setText(e.target.value)
-              }
+              onChange={(e) => setText(e.target.value)}
             />
           </div>
+
           <div>
             <Label>Предпросмотр</Label>
             <div
@@ -122,48 +121,28 @@ export default function EditTaskModal({ task, onClose, onSaved }: EditTaskModalP
             </span>
           </div>
 
-          {hasAnswer && (
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            {hasAnswer && (
               <div>
                 <Label>Правильный ответ</Label>
                 <Input
                   value={answer}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setAnswer(e.target.value)
-                  }
+                  onChange={(e) => setAnswer(e.target.value)}
                   placeholder="29"
                   className="mt-1"
                 />
               </div>
-              <div>
-                <Label>Подсказка</Label>
-                <Input
-                  value={hint}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setHint(e.target.value)
-                  }
-                  placeholder="Впишите правильный ответ."
-                  className="mt-1"
-                />
-              </div>
+            )}
+            <div>
+              <Label>Подсказка</Label>
+              <Input
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                placeholder="Впишите правильный ответ."
+                className="mt-1"
+              />
             </div>
-          )}
-
-          {!hasAnswer && (
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label>Подсказка</Label>
-                <Input
-                  value={hint}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setHint(e.target.value)
-                  }
-                  placeholder="Впишите правильный ответ."
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          )}
+          </div>
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex justify-end gap-2">

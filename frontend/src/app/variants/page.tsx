@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { Variant } from '@/lib/api';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { variantApi } from '@/entities/variant/api/variant-api';
+import type { Variant } from '@/entities/variant/model/types';
 
 export default function VariantsPage() {
   const { user } = useAuth();
@@ -13,10 +14,13 @@ export default function VariantsPage() {
 
   useEffect(() => {
     if (!user) return;
-    api.get<Variant[]>('/variants').then((r) => setVariants(r.data));
+    variantApi
+      .getList()
+      .then(setVariants)
+      .catch(() => {});
   }, [user]);
 
-  if (!user)
+  if (!user) {
     return (
       <div className="text-center py-20">
         <Link href="/login" className="text-indigo-600 hover:underline">
@@ -25,6 +29,7 @@ export default function VariantsPage() {
         чтобы увидеть варианты
       </div>
     );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

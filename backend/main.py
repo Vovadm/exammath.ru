@@ -1,13 +1,14 @@
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from backend.core.config import CORS_ORIGINS, UPLOAD_DIR
 from backend.database import init_db
-from backend.routers import (
+from backend.api.routers import (
     admin,
     auth,
     classes,
@@ -29,28 +30,26 @@ app = FastAPI(title="ExamMath API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://exammath.ru",
-        "https://www.exammath.ru",
-        "http://localhost:3000",
-        "http://192.168.1.83:3000",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-app.include_router(auth.router)
-app.include_router(tasks.router)
-app.include_router(solutions.router)
-app.include_router(variants.router)
-app.include_router(admin.router)
-app.include_router(profile.router)
-app.include_router(classes.router)
-app.include_router(teacher.router)
+for router in [
+    auth.router,
+    tasks.router,
+    solutions.router,
+    variants.router,
+    admin.router,
+    profile.router,
+    classes.router,
+    teacher.router,
+]:
+    app.include_router(router)
 
 
 @app.get("/api/health")

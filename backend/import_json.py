@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import hash_password
 from backend.database import Base, async_session, engine
-from backend.models import Task, User, UserStats
+from backend.domain.models import Task, User, UserStats
 
 
 @asynccontextmanager

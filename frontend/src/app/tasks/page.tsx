@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import api, { Task, TaskListResponse, TYPE_NAMES } from '@/lib/api';
-import { TaskCard } from '@/components/task-card';
+import { taskApi } from '@/entities/task/api/task-api';
+import { TaskCard } from '@/widgets/task-card/ui/task-card';
+import { TYPE_NAMES } from '@/shared/config/task-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import type { Task } from '@/entities/task/model/types';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -15,13 +17,19 @@ export default function TasksPage() {
   const [taskType, setTaskType] = useState<number | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    const params: Record<string, string | number> = { page, per_page: 10 };
-    if (taskType !== null) params.task_type = taskType;
-    if (search) params.search = search;
-    const r = await api.get<TaskListResponse>('/tasks', { params });
-    setTasks(r.data.tasks);
-    setTotal(r.data.total);
-    setPages(r.data.pages);
+    try {
+      const data = await taskApi.getList({
+        page,
+        per_page: 10,
+        task_type: taskType ?? undefined,
+        search: search || undefined,
+      });
+      setTasks(data.tasks);
+      setTotal(data.total);
+      setPages(data.pages);
+    } catch {
+      /* */
+    }
   }, [page, taskType, search]);
 
   useEffect(() => {
@@ -33,6 +41,11 @@ export default function TasksPage() {
     fetchTasks();
   };
 
+  const selectType = (t: number | null) => {
+    setTaskType(t);
+    setPage(1);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Банк заданий</h1>
@@ -41,10 +54,8 @@ export default function TasksPage() {
         <Input
           placeholder="🔍 Поиск по тексту..."
           value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(e.target.value)
-          }
-          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleSearch()}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           className="flex-1"
         />
         <Button onClick={handleSearch}>Найти</Button>
@@ -56,10 +67,7 @@ export default function TasksPage() {
           <Button
             size="sm"
             variant={taskType === null ? 'default' : 'outline'}
-            onClick={() => {
-              setTaskType(null);
-              setPage(1);
-            }}
+            onClick={() => selectType(null)}
           >
             Все
           </Button>
@@ -68,10 +76,7 @@ export default function TasksPage() {
               key={t}
               size="sm"
               variant={taskType === t ? 'default' : 'outline'}
-              onClick={() => {
-                setTaskType(t);
-                setPage(1);
-              }}
+              onClick={() => selectType(t)}
               title={TYPE_NAMES[t]}
             >
               {t}
@@ -84,10 +89,7 @@ export default function TasksPage() {
               size="sm"
               variant={taskType === t ? 'default' : 'outline'}
               className={taskType === t ? 'bg-purple-600' : 'border-dashed'}
-              onClick={() => {
-                setTaskType(t);
-                setPage(1);
-              }}
+              onClick={() => selectType(t)}
               title={TYPE_NAMES[t]}
             >
               {t}

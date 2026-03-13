@@ -1,25 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { User } from '@/lib/api';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
+import { userApi } from '@/entities/user/api/user-api';
+import type { User } from '@/entities/user/model/types';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    api
-      .get<User[]>('/admin/users')
-      .then((r) => setUsers(r.data))
+    userApi
+      .getAll()
+      .then(setUsers)
       .catch(() => {});
   }, []);
 
   const changeRole = async (userId: number, role: string) => {
     try {
-      await api.put(`/admin/users/${userId}/role?role=${role}`);
+      await userApi.setRole(userId, role);
       setUsers(
         users.map((u) => (u.id === userId ? { ...u, role: role as User['role'] } : u)),
       );
