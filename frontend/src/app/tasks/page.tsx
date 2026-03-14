@@ -21,7 +21,8 @@ function TasksContent() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [taskType, setTaskType] = useState<number | null>(initialType);
 
   const fetchTasks = useCallback(async () => {
@@ -30,7 +31,7 @@ function TasksContent() {
         page,
         per_page: 10,
         task_type: taskType ?? undefined,
-        search: search || undefined,
+        search: appliedSearch || undefined,
       });
       setTasks(data.tasks);
       setTotal(data.total);
@@ -38,7 +39,7 @@ function TasksContent() {
     } catch (e) {
       console.error(e);
     }
-  }, [page, taskType, search]);
+  }, [page, taskType, appliedSearch]);
 
   useEffect(() => {
     fetchTasks();
@@ -46,7 +47,7 @@ function TasksContent() {
 
   const handleSearch = () => {
     setPage(1);
-    fetchTasks();
+    setAppliedSearch(searchInput);
   };
 
   const selectType = (t: number | null) => {
@@ -69,8 +70,8 @@ function TasksContent() {
       <div className="flex gap-3 mb-4">
         <Input
           placeholder="🔍 Поиск по тексту..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           className="flex-1"
         />

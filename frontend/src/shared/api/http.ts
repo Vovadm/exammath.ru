@@ -17,7 +17,7 @@ http.interceptors.response.use(
       typeof window !== 'undefined' &&
       !['/login', '/register', '/tasks', '/'].includes(window.location.pathname)
     ) {
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('auth-unauthorized'));
     }
     return Promise.reject(error);
   },

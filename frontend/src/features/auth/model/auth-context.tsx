@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import http from '@/shared/api/http';
 import type { User } from '@/entities/user/model/types';
 
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const refetch = async () => {
     try {
@@ -74,6 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refetch();
   }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => router.push('/login');
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, refetch, login, register, logout }}>

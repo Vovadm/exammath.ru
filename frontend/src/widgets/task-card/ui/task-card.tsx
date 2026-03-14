@@ -46,6 +46,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
       .catch(() => {});
   }, [user, task.id]);
 
+  const proxyUrl = (text: string) => {
+    if (!text) return text;
+    return text.replace(/https:\/\/ege\.fipi\.ru/g, '/fipi-proxy');
+  };
+
   return (
     <Card className="mb-4 hover:shadow-lg transition-shadow">
       <CardHeader className="bg-gray-50 border-b flex flex-row items-center justify-between py-3 px-5">
@@ -68,7 +73,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
       <CardContent className="p-5">
         <div
           className="text-sm leading-8 text-gray-800"
-          dangerouslySetInnerHTML={{ __html: formatMath(task.text) }}
+          dangerouslySetInnerHTML={{ __html: proxyUrl(formatMath(task.text)) }}
         />
 
         {task.tables?.map((t, i) => (
@@ -76,7 +81,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
             key={i}
             className="my-4 overflow-x-auto"
             dangerouslySetInnerHTML={{
-              __html: t
+              __html: proxyUrl(t)
                 .replace('<table>', '<table class="w-full border-collapse text-sm">')
                 .replace(
                   /<td/g,
@@ -93,7 +98,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
         {task.images?.map((url, i) => (
           <div key={i} className="mt-4 relative w-full h-96">
             <Image
-              src={url}
+              src={proxyUrl(url)}
               alt="Задание"
               fill
               className="rounded-lg border object-contain"

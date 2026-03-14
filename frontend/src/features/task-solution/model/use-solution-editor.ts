@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { solutionApi } from '@/entities/solution/api/solution-api';
 import type { Solution } from '@/entities/solution/model/types';
 
@@ -18,18 +19,24 @@ interface UseSolutionEditorReturn {
 export function useSolutionEditor(): UseSolutionEditorReturn {
   const [solutionText, setSolutionText] = useState('');
   const [solutionId, setSolutionId] = useState<number | null>(null);
+  const solutionIdRef = useRef<number | null>(null);
   const [solutionFiles, setSolutionFiles] = useState<
     { id: number; filename: string }[]
   >([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const updateSolutionId = (id: number | null) => {
+    setSolutionId(id);
+    solutionIdRef.current = id;
+  };
+
   const loadFromSolution = (solutions: Solution[]) => {
     if (!solutions.length) return;
     const latest = solutions[0];
     const textBlock = latest.content?.find((c) => c.type === 'text');
     if (textBlock) setSolutionText(textBlock.value);
-    setSolutionId(latest.id);
+    updateSolutionId(latest.id);
     if (latest.files) {
       setSolutionFiles(latest.files.map((f) => ({ id: f.id, filename: f.filepath })));
     }
@@ -40,21 +47,22 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
       const data = await solutionApi.save(taskId, answer, [
         { type: 'text', value: solutionText },
       ]);
-      setSolutionId(data.id);
-      alert('Решение сохранено!');
+      updateSolutionId(data.id);
+      toast.success('Решение сохранено!');
     } catch {
-      alert('Ошибка сохранения');
+      toast.error('Ошибка сохранения');
     }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0] || !solutionId) return;
+    const currentId = solutionIdRef.current;
+    if (!e.target.files?.[0] || !currentId) return;
     setUploading(true);
     try {
-      const data = await solutionApi.uploadFile(solutionId, e.target.files[0]);
+      const data = await solutionApi.uploadFile(currentId, e.target.files[0]);
       setSolutionFiles((prev) => [...prev, { id: data.id, filename: data.filename }]);
     } catch {
-      alert('Ошибка загрузки файла');
+      toast.error('Ошибка загрузки файла');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -67,10 +75,10 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
         const data = await solutionApi.save(taskId, answer, [
           { type: 'text', value: solutionText },
         ]);
-        setSolutionId(data.id);
+        updateSolutionId(data.id);
         fileInputRef.current?.click();
       } catch {
-        alert('Сначала сохраните решение');
+        toast.error('Сначала сохраните решение');
       }
     } else {
       fileInputRef.current?.click();
