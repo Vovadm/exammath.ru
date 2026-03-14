@@ -1,6 +1,5 @@
 import os
 
-
 ENV = os.getenv("ENV", "production")
 IS_PROD = ENV == "production"
 

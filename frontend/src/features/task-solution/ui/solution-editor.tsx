@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { API_BASE } from '@/shared/api/http';
 import type { useSolutionEditor } from '../model/use-solution-editor';
@@ -46,12 +47,14 @@ export function SolutionEditor({
       {solutionFiles.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-3">
           {solutionFiles.map((f) => (
-            <img
-              key={f.id}
-              src={`${API_BASE}/uploads/${f.filename}`}
-              alt="Файл решения"
-              className="max-h-40 rounded border"
-            />
+            <div key={f.id} className="relative w-40 h-40">
+              <Image
+                src={`${API_BASE}/uploads/${f.filename}`}
+                alt="Файл решения"
+                fill
+                className="rounded border object-contain"
+              />
+            </div>
           ))}
         </div>
       )}

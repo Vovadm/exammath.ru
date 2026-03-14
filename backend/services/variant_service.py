@@ -1,8 +1,8 @@
 from fastapi import HTTPException
 
+from backend.repositories.solution_repo import SolutionRepository
 from backend.repositories.task_repo import TaskRepository
 from backend.repositories.variant_repo import VariantRepository
-from backend.repositories.solution_repo import SolutionRepository
 from backend.schemas.solution import SolutionFileResponse
 from backend.schemas.task import TaskResponse
 from backend.schemas.variant import (

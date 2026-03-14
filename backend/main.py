@@ -1,13 +1,11 @@
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.core.config import CORS_ORIGINS, UPLOAD_DIR
-from backend.database import init_db
 from backend.api.routers import (
     admin,
     auth,
@@ -18,6 +16,8 @@ from backend.api.routers import (
     teacher,
     variants,
 )
+from backend.core.config import CORS_ORIGINS, UPLOAD_DIR
+from backend.database import init_db
 
 
 @asynccontextmanager

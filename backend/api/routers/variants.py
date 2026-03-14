@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter
 
 from backend.core.deps import CurrentUser, DbSession, TeacherOrAdmin
-from backend.database import get_db
 from backend.repositories.class_repo import ClassRepository
 from backend.repositories.solution_repo import SolutionRepository
 from backend.repositories.task_repo import TaskRepository

@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { adminApi, type AdminStats } from '@/entities/admin/api/admin-api';
+import {
+  adminApi,
+  type AdminStats as AdminStatsType,
+} from '@/entities/admin/api/admin-api';
 import { TYPE_NAMES } from '@/shared/config/task-types';
 
-export default function AdminStats() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
+export default function AdminStatsComponent() {
+  const [stats, setStats] = useState<AdminStatsType | null>(null);
 
   useEffect(() => {
     adminApi

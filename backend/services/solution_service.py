@@ -1,6 +1,6 @@
+from datetime import datetime, timezone
 import os
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import HTTPException, UploadFile
 
@@ -145,13 +145,6 @@ class SolutionService:
             filename=original_name,
             filepath=unique_name,
             file_type=file.content_type,
-        )
-
-        original_kb = len(raw_bytes) / 1024
-        compressed_kb = len(compressed_bytes) / 1024
-        print(
-            f"[IMG] {original_name}: {original_kb:.0f}KB"
-            f" -> {compressed_kb:.0f}KB ({compressed_kb / original_kb * 100:.0f}%)"
         )
 
         return {

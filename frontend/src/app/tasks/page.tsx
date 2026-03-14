@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { taskApi } from '@/entities/task/api/task-api';
 import { TaskCard } from '@/widgets/task-card/ui/task-card';
 import { TYPE_NAMES } from '@/shared/config/task-types';
@@ -8,13 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Task } from '@/entities/task/model/types';
 
-export default function TasksPage() {
+function TasksContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const urlType = searchParams.get('type');
+  const initialType = urlType ? Number(urlType) : null;
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [taskType, setTaskType] = useState<number | null>(null);
+  const [taskType, setTaskType] = useState<number | null>(initialType);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -27,8 +35,8 @@ export default function TasksPage() {
       setTasks(data.tasks);
       setTotal(data.total);
       setPages(data.pages);
-    } catch {
-      /* */
+    } catch (e) {
+      console.error(e);
     }
   }, [page, taskType, search]);
 
@@ -44,6 +52,14 @@ export default function TasksPage() {
   const selectType = (t: number | null) => {
     setTaskType(t);
     setPage(1);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (t !== null) {
+      params.set('type', t.toString());
+    } else {
+      params.delete('type');
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -128,5 +144,15 @@ export default function TasksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense
+      fallback={<div className="text-center py-20 text-gray-500">Загрузка...</div>}
+    >
+      <TasksContent />
+    </Suspense>
   );
 }

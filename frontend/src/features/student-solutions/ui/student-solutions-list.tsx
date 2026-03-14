@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { API_BASE } from '@/shared/api/http';
@@ -67,12 +68,14 @@ export function StudentSolutionsList({ taskId }: StudentSolutionsListProps) {
             {s.files?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {s.files.map((f) => (
-                  <img
-                    key={f.id}
-                    src={`${API_BASE}/uploads/${f.filepath}`}
-                    alt="Решение ученика"
-                    className="max-h-32 rounded border"
-                  />
+                  <div key={f.id} className="relative w-32 h-32">
+                    <Image
+                      src={`${API_BASE}/uploads/${f.filepath}`}
+                      alt="Решение ученика"
+                      fill
+                      className="rounded border object-contain"
+                    />
+                  </div>
                 ))}
               </div>
             )}

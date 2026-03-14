@@ -9,7 +9,7 @@ from backend.repositories.task_repo import TaskRepository
 from backend.repositories.user_repo import UserRepository
 from backend.repositories.variant_repo import VariantRepository
 from backend.schemas.auth import UserResponse
-from backend.schemas.class_ import ClassMemberResponse, ClassResponse
+from backend.schemas.class_ import ClassResponse
 from backend.schemas.variant import VariantCreate, VariantResponse
 from backend.services.class_service import ClassService
 from backend.services.variant_service import VariantService

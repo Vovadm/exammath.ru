@@ -9,9 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.database import Base
 
 if TYPE_CHECKING:
-    from backend.domain.models.user import User
-    from backend.domain.models.task import Task
     from backend.domain.models.class_ import SchoolClass
+    from backend.domain.models.task import Task
+    from backend.domain.models.user import User
 
 
 class Variant(Base):

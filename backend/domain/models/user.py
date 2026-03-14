@@ -3,14 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
 
 if TYPE_CHECKING:
-    from backend.domain.models.solution import Solution
     from backend.domain.models.class_ import ClassMember
+    from backend.domain.models.solution import Solution
 
 
 class User(Base):

@@ -77,12 +77,15 @@ export function VariantList({ variants, classes }: VariantListProps) {
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        if (v.id && s.user_id) {
-                          router.push(`/variants/${v.id}/student/${s.user_id}`);
+                        const sId = Number(s.user_id);
+                        if (v.id && !isNaN(sId)) {
+                          router.push(`/variants/${v.id}/student/${sId}`);
+                        } else {
+                          alert(`Ошибка: id варианта=${v.id}, id ученика=${s.user_id}`);
                         }
                       }}
                     >
-                      {s.username}
+                      {s.username} (ID: {s.user_id ?? 'MISSING'})
                     </Button>
                   ))}
                 </div>

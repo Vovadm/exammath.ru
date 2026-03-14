@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,6 @@ import { solutionApi } from '@/entities/solution/api/solution-api';
 import type { Task } from '@/entities/task/model/types';
 import { TYPE_NAMES, PART2_TYPES } from '@/shared/config/task-types';
 import { formatMath } from '@/lib/math-format';
-import { API_BASE } from '@/shared/api/http';
 
 interface TaskCardProps {
   task: Task;
@@ -55,7 +56,12 @@ export function TaskCard({ task, index }: TaskCardProps) {
           </Badge>
           {task.images?.length > 0 && <Badge variant="outline">📷</Badge>}
           {task.tables?.length > 0 && <Badge variant="outline">📊</Badge>}
-          <span className="text-xs text-gray-400 font-mono">{task.fipi_id}</span>
+          <Link
+            href={`/tasks/${task.id}`}
+            className="text-xs text-gray-400 font-mono hover:underline hover:text-indigo-600 transition-colors"
+          >
+            {task.fipi_id}
+          </Link>
         </div>
       </CardHeader>
 
@@ -85,11 +91,12 @@ export function TaskCard({ task, index }: TaskCardProps) {
         ))}
 
         {task.images?.map((url, i) => (
-          <div key={i} className="mt-4 text-center">
-            <img
+          <div key={i} className="mt-4 relative w-full h-96">
+            <Image
               src={url}
               alt="Задание"
-              className="max-w-full max-h-96 mx-auto rounded-lg border"
+              fill
+              className="rounded-lg border object-contain"
             />
           </div>
         ))}

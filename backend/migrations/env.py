@@ -17,7 +17,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from backend.database import Base
-import backend.models  # noqa: F401
+import backend.domain.models  # noqa: F401
 
 config = context.config
 

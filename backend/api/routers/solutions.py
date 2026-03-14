@@ -1,11 +1,9 @@
-from fastapi import APIRouter, File, UploadFile
 from typing import Annotated
 
-from backend.core.deps import (
-    CurrentUser,
-    DbSession,
-    TeacherOrAdmin as AdminOrTeacher,
-)
+from fastapi import APIRouter, File, UploadFile
+
+from backend.core.deps import CurrentUser, DbSession
+from backend.core.deps import TeacherOrAdmin as AdminOrTeacher
 from backend.repositories.solution_repo import SolutionRepository
 from backend.repositories.task_repo import TaskRepository
 from backend.repositories.user_repo import UserRepository

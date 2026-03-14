@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { solutionApi } from '@/entities/solution/api/solution-api';
 import type { Solution } from '@/entities/solution/model/types';
 
