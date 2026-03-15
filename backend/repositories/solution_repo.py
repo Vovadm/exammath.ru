@@ -25,7 +25,9 @@ class SolutionRepository:
             q = q.where(Solution.is_correct.is_(None))
         else:
             q = q.where(Solution.is_correct.is_(is_correct))
-        q = q.order_by(Solution.created_at.desc())
+
+        q = q.order_by(Solution.created_at.desc()).limit(1)
+
         result = await self._db.execute(q)
         return result.scalar_one_or_none()
 

@@ -7,10 +7,19 @@ import { useAnswerCheck } from '../model/use-answer-check';
 interface AnswerCheckerProps {
   taskId: number;
   initialAnswer?: string;
+  initialCorrect?: boolean | null;
 }
 
-export function AnswerChecker({ taskId, initialAnswer }: AnswerCheckerProps) {
-  const { answer, result, setAnswer, check } = useAnswerCheck(taskId, initialAnswer);
+export function AnswerChecker({
+  taskId,
+  initialAnswer,
+  initialCorrect,
+}: AnswerCheckerProps) {
+  const { answer, result, setAnswer, check } = useAnswerCheck(
+    taskId,
+    initialAnswer,
+    initialCorrect,
+  );
 
   return (
     <div className="flex gap-2 items-center">
@@ -18,9 +27,7 @@ export function AnswerChecker({ taskId, initialAnswer }: AnswerCheckerProps) {
         <span
           className={`text-sm font-semibold ${result.correct ? 'text-green-600' : 'text-red-600'}`}
         >
-          {result.correct
-            ? '✅ Верно!'
-            : `❌ Неверно${result.correct_answer ? ` (${result.correct_answer})` : ''}`}
+          {result.correct ? '✅ Верно!' : `❌ Неверно`}
         </span>
       )}
       <Input

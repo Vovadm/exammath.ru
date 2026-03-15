@@ -27,6 +27,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
   const { user } = useAuth();
   const [showSolution, setShowSolution] = useState(false);
   const [initialAnswer, setInitialAnswer] = useState('');
+  const [initialCorrect, setInitialCorrect] = useState<boolean | null>(null);
 
   const editor = useSolutionEditor();
 
@@ -41,7 +42,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
       .getMy(task.id)
       .then((solutions) => {
         editor.loadFromSolution(solutions);
-        if (solutions[0]?.answer) setInitialAnswer(solutions[0].answer);
+        if (solutions[0]) {
+          if (solutions[0].answer) setInitialAnswer(solutions[0].answer);
+          if (solutions[0].is_correct !== undefined)
+            setInitialCorrect(solutions[0].is_correct);
+        }
       })
       .catch(() => {});
   }, [user, task.id]);
@@ -51,12 +56,13 @@ export function TaskCard({ task, index }: TaskCardProps) {
     return text.replace(/https:\/\/ege\.fipi\.ru/g, '/fipi-proxy');
   };
 
-  const processInlineImages = (text: string) => {
-    if (!text) return text;
-    return text.replace(/\[IMG:([^\]]+)\]/g, (_, url) => {
-      const proxiedUrl = proxyUrl(url);
-      return `<img src="${proxiedUrl}" class="inline-block align-middle px-1 max-h-12" alt="inline image" />`;
-    });
+  const processText = (text: string) => {
+    let processed = formatMath(text);
+    processed = processed.replace(
+      /\[IMG:([^\]]+)\]/g,
+      '<img src="$1" class="inline-block align-middle mx-1" style="max-height: 4em; object-fit: contain;" alt="inline" />',
+    );
+    return proxyUrl(processed);
   };
 
   return (
@@ -81,9 +87,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
       <CardContent className="p-5">
         <div
           className="text-sm leading-8 text-gray-800"
-          dangerouslySetInnerHTML={{
-            __html: processInlineImages(proxyUrl(formatMath(task.text))),
-          }}
+          dangerouslySetInnerHTML={{ __html: processText(task.text) }}
         />
 
         {task.tables?.map((t, i) => (
@@ -91,7 +95,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
             key={i}
             className="my-4 overflow-x-auto"
             dangerouslySetInnerHTML={{
-              __html: processInlineImages(proxyUrl(t))
+              __html: proxyUrl(t)
                 .replace('<table>', '<table class="w-full border-collapse text-sm">')
                 .replace(
                   /<td/g,
@@ -145,7 +149,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
         </Button>
 
         {showAnswerField && (
-          <AnswerChecker taskId={task.id} initialAnswer={initialAnswer} />
+          <AnswerChecker
+            taskId={task.id}
+            initialAnswer={initialAnswer}
+            initialCorrect={initialCorrect}
+          />
         )}
       </CardFooter>
     </Card>

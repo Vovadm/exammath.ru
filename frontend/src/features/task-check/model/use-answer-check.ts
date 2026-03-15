@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   solutionApi,
   type CheckAnswerResponse,
 } from '@/entities/solution/api/solution-api';
+import { toast } from 'sonner';
 
 interface UseAnswerCheckReturn {
   answer: string;
@@ -14,9 +15,17 @@ interface UseAnswerCheckReturn {
 export function useAnswerCheck(
   taskId: number,
   initialAnswer = '',
+  initialCorrect: boolean | null = null,
 ): UseAnswerCheckReturn {
   const [answer, setAnswer] = useState(initialAnswer);
-  const [result, setResult] = useState<CheckAnswerResponse | null>(null);
+  const [result, setResult] = useState<CheckAnswerResponse | null>(
+    initialCorrect !== null ? { correct: initialCorrect } : null,
+  );
+
+  useEffect(() => {
+    if (initialAnswer) setAnswer(initialAnswer);
+    if (initialCorrect !== null) setResult({ correct: initialCorrect });
+  }, [initialAnswer, initialCorrect]);
 
   const check = async () => {
     if (!answer.trim()) return;
@@ -24,7 +33,7 @@ export function useAnswerCheck(
       const data = await solutionApi.check(taskId, answer.trim());
       setResult(data);
     } catch {
-      alert('Ошибка проверки');
+      toast.error('Ошибка проверки');
     }
   };
 
