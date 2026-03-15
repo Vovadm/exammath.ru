@@ -1,53 +1,43 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { User, SchoolClass } from '@/lib/api';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
+import { classApi } from '@/entities/class/api/class-api';
+import { userApi } from '@/entities/user/api/user-api';
+import type { SchoolClass, User } from '@/entities/user/model/types';
 
 export default function AdminClasses() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [newClassName, setNewClassName] = useState('');
-  const [newClassDesc, setNewClassDesc] = useState('');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [expandedClass, setExpandedClass] = useState<number | null>(null);
+  const [newClassName, setNewClassName] = useState('');
+  const [newClassDesc, setNewClassDesc] = useState('');
   const [addUserId, setAddUserId] = useState('');
   const [addUserRole, setAddUserRole] = useState('student');
 
-  const loadClasses = async () => {
-    try {
-      const r = await api.get<SchoolClass[]>('/classes');
-      setClasses(r.data);
-    } catch {
-      /* */
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const r = await api.get<User[]>('/admin/users');
-      setAllUsers(r.data);
-    } catch {
-      /* */
-    }
-  };
+  const loadClasses = () =>
+    classApi
+      .getList()
+      .then(setClasses)
+      .catch(() => {});
 
   useEffect(() => {
     loadClasses();
-    loadUsers();
+    userApi
+      .getAll()
+      .then(setAllUsers)
+      .catch(() => {});
   }, []);
 
   const createClass = async () => {
     if (!newClassName.trim()) return;
     try {
-      await api.post('/classes', {
-        name: newClassName,
-        description: newClassDesc || null,
-      });
+      await classApi.create({ name: newClassName, description: newClassDesc || null });
       setNewClassName('');
       setNewClassDesc('');
       loadClasses();
@@ -59,7 +49,7 @@ export default function AdminClasses() {
   const deleteClass = async (classId: number) => {
     if (!confirm('Удалить класс?')) return;
     try {
-      await api.delete(`/classes/${classId}`);
+      await classApi.delete(classId);
       loadClasses();
     } catch {
       alert('Ошибка удаления');
@@ -73,21 +63,18 @@ export default function AdminClasses() {
       return;
     }
     try {
-      await api.post(`/classes/${classId}/members`, {
-        user_id: userId,
-        role: addUserRole,
-      });
+      await classApi.addMember(classId, { user_id: userId, role: addUserRole });
       setAddUserId('');
       loadClasses();
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      alert(axiosErr.response?.data?.detail || 'Ошибка добавления');
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      alert(err.response?.data?.detail ?? 'Ошибка добавления');
     }
   };
 
   const removeMember = async (classId: number, userId: number) => {
     try {
-      await api.delete(`/classes/${classId}/members/${userId}`);
+      await classApi.removeMember(classId, userId);
       loadClasses();
     } catch {
       alert('Ошибка удаления участника');
@@ -105,9 +92,7 @@ export default function AdminClasses() {
             <Label>Название класса</Label>
             <Input
               value={newClassName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewClassName(e.target.value)
-              }
+              onChange={(e) => setNewClassName(e.target.value)}
               placeholder="11А"
               className="mt-1"
             />
@@ -116,9 +101,7 @@ export default function AdminClasses() {
             <Label>Описание</Label>
             <Input
               value={newClassDesc}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewClassDesc(e.target.value)
-              }
+              onChange={(e) => setNewClassDesc(e.target.value)}
               placeholder="Профильная математика"
               className="mt-1"
             />
@@ -205,9 +188,7 @@ export default function AdminClasses() {
                   <select
                     className="border rounded-lg px-3 py-2 text-sm flex-1"
                     value={addUserId}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      setAddUserId(e.target.value)
-                    }
+                    onChange={(e) => setAddUserId(e.target.value)}
                   >
                     <option value="">Выберите пользователя</option>
                     {allUsers
@@ -221,9 +202,7 @@ export default function AdminClasses() {
                   <select
                     className="border rounded-lg px-3 py-2 text-sm w-32"
                     value={addUserRole}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      setAddUserRole(e.target.value)
-                    }
+                    onChange={(e) => setAddUserRole(e.target.value)}
                   >
                     <option value="student">Ученик</option>
                     <option value="teacher">Учитель</option>

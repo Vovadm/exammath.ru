@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { Header } from '@/components/header';
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 bg-gray-50">{children}</main>
           <Footer />
         </AuthProvider>
+        <Toaster richColors position="bottom-right" />
       </body>
     </html>
   );

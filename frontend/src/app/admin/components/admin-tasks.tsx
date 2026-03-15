@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import api, { Task, TaskListResponse, TYPE_NAMES } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { taskApi } from '@/entities/task/api/task-api';
+import { TYPE_NAMES } from '@/shared/config/task-types';
+import type { Task } from '@/entities/task/model/types';
 import EditTaskModal from './edit-task-modal';
 
 function truncateText(text: string, max: number) {
@@ -27,18 +29,17 @@ export default function AdminTasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    const params: Record<string, string | number> = { page, per_page: 10 };
-    if (activeFilter) {
-      params.filter = activeFilter;
-    } else if (taskType !== null) {
-      params.task_type = taskType;
-    }
-    if (search) params.search = search;
     try {
-      const r = await api.get<TaskListResponse>('/tasks', { params });
-      setTasks(r.data.tasks);
-      setTotal(r.data.total);
-      setPages(r.data.pages);
+      const data = await taskApi.getList({
+        page,
+        per_page: 10,
+        task_type: activeFilter ? undefined : (taskType ?? undefined),
+        search: search || undefined,
+        filter: activeFilter ?? undefined,
+      });
+      setTasks(data.tasks);
+      setTotal(data.total);
+      setPages(data.pages);
     } catch {
       /* */
     }
@@ -49,12 +50,8 @@ export default function AdminTasks() {
   }, [fetchTasks]);
 
   const handleFilterClick = (filter: string) => {
-    if (activeFilter === filter) {
-      setActiveFilter(null);
-    } else {
-      setActiveFilter(filter);
-      setTaskType(null);
-    }
+    setActiveFilter((prev) => (prev === filter ? null : filter));
+    setTaskType(null);
     setPage(1);
   };
 
@@ -70,10 +67,8 @@ export default function AdminTasks() {
         <Input
           placeholder="Поиск..."
           value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(e.target.value)
-          }
-          onKeyDown={(e: React.KeyboardEvent) => {
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
             if (e.key === 'Enter') {
               setPage(1);
               fetchTasks();
@@ -90,6 +85,7 @@ export default function AdminTasks() {
           Найти
         </Button>
       </div>
+
       <div className="flex flex-wrap gap-1.5 mb-2">
         <Button
           size="sm"
@@ -110,6 +106,7 @@ export default function AdminTasks() {
           </Button>
         ))}
       </div>
+
       <div className="flex flex-wrap gap-1.5 mb-4">
         <Button
           size="sm"
@@ -136,9 +133,11 @@ export default function AdminTasks() {
           ❌ Без ответа (1-12)
         </Button>
       </div>
+
       <p className="text-sm text-gray-500 mb-4">
         Всего: <b>{total}</b> | Стр. {page}/{pages}
       </p>
+
       {editingTask && (
         <EditTaskModal
           task={editingTask}
@@ -149,6 +148,7 @@ export default function AdminTasks() {
           }}
         />
       )}
+
       <div className="space-y-3">
         {tasks.map((task) => (
           <Card key={task.id}>
@@ -158,7 +158,7 @@ export default function AdminTasks() {
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge variant="outline">#{task.id}</Badge>
                     <Badge>
-                      №{task.task_type} {TYPE_NAMES[task.task_type] || '???'}
+                      №{task.task_type} {TYPE_NAMES[task.task_type] ?? '???'}
                     </Badge>
                     <span className="text-xs text-gray-400 font-mono">
                       {task.fipi_id}
@@ -193,6 +193,7 @@ export default function AdminTasks() {
           </Card>
         ))}
       </div>
+
       {pages > 1 && (
         <div className="flex justify-center gap-2 mt-6">
           <Button

@@ -1,22 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { TYPE_NAMES } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  adminApi,
+  type AdminStats as AdminStatsType,
+} from '@/entities/admin/api/admin-api';
+import { TYPE_NAMES } from '@/shared/config/task-types';
 
-interface AdminStatsData {
-  total_tasks: number;
-  total_users: number;
-  tasks_by_type: Record<string, number>;
-}
-
-export default function AdminStats() {
-  const [stats, setStats] = useState<AdminStatsData | null>(null);
+export default function AdminStatsComponent() {
+  const [stats, setStats] = useState<AdminStatsType | null>(null);
 
   useEffect(() => {
-    api
-      .get<AdminStatsData>('/admin/stats')
-      .then((r) => setStats(r.data))
+    adminApi
+      .getStats()
+      .then(setStats)
       .catch(() => {});
   }, []);
 
@@ -47,17 +45,14 @@ export default function AdminStats() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(stats.tasks_by_type)
               .sort(([a], [b]) => +a - +b)
-              .map(([typeKey, count]) => {
-                const typeNum = parseInt(typeKey);
-                return (
-                  <div key={typeKey} className="p-3 bg-gray-50 rounded-lg text-center">
-                    <p className="text-xs text-gray-500">
-                      №{typeKey} {TYPE_NAMES[typeNum] || '???'}
-                    </p>
-                    <p className="text-2xl font-bold">{count}</p>
-                  </div>
-                );
-              })}
+              .map(([typeKey, count]) => (
+                <div key={typeKey} className="p-3 bg-gray-50 rounded-lg text-center">
+                  <p className="text-xs text-gray-500">
+                    №{typeKey} {TYPE_NAMES[+typeKey] ?? '???'}
+                  </p>
+                  <p className="text-2xl font-bold">{count}</p>
+                </div>
+              ))}
           </div>
         </CardContent>
       </Card>

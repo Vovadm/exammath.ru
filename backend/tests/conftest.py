@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import (
 
 from backend.auth import create_access_token, hash_password
 from backend.database import Base, get_db
+from backend.domain.models import Task, User, UserStats
 from backend.main import app
-from backend.models import Task, User, UserStats
 
 fake = Faker("ru_RU")
 

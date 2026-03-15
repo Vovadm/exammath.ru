@@ -6,8 +6,8 @@ import tempfile
 import pytest
 from sqlalchemy import select
 
+from backend.domain.models import Task
 from backend.import_json import import_tasks
-from backend.models import Task
 from backend.tests.conftest import auth_headers, make_task
 
 pytestmark = pytest.mark.asyncio

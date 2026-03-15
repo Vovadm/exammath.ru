@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth import hash_password
 from backend.database import Base, async_session, engine
-from backend.models import Task, User, UserStats
+from backend.domain.models import Task, User, UserStats
 
 
 @asynccontextmanager
@@ -37,42 +37,50 @@ async def import_tasks(
         data = json.load(f)
 
     imported = 0
-    skipped = 0
+    updated = 0
 
     async with _get_session(db_session) as db:
         for item in data:
             fipi_id = item.get("id", "")
             if not fipi_id:
-                skipped += 1
                 continue
 
             result = await db.execute(
                 select(Task).where(Task.fipi_id == fipi_id)
             )
-            if result.scalar_one_or_none():
-                skipped += 1
-                continue
+            existing_task = result.scalar_one_or_none()
 
-            task = Task(
-                fipi_id=fipi_id,
-                guid=item.get("guid", ""),
-                task_type=item.get("type", 0),
-                text=item.get("text", ""),
-                hint=item.get("hint", ""),
-                answer=item.get("answer"),
-                images=item.get("images", []),
-                inline_images=item.get("inline_images", []),
-                tables=item.get("tables", []),
-            )
-            db.add(task)
-            imported += 1
+            if existing_task:
+                existing_task.text = item.get("text", "")
+                existing_task.images = item.get("images", [])
+                existing_task.inline_images = item.get("inline_images", [])
+                existing_task.tables = item.get("tables", [])
+                existing_task.task_type = item.get("type", 0)
+                existing_task.hint = item.get("hint", "")
+                if item.get("answer"):
+                    existing_task.answer = item.get("answer")
+                updated += 1
+            else:
+                task = Task(
+                    fipi_id=fipi_id,
+                    guid=item.get("guid", ""),
+                    task_type=item.get("type", 0),
+                    text=item.get("text", ""),
+                    hint=item.get("hint", ""),
+                    answer=item.get("answer"),
+                    images=item.get("images", []),
+                    inline_images=item.get("inline_images", []),
+                    tables=item.get("tables", []),
+                )
+                db.add(task)
+                imported += 1
 
         await db.flush()
 
         if db_session is None:
             await db.commit()
 
-    print(f"Импортировано: {imported}, пропущено: {skipped}")
+    print(f"Новых заданий: {imported}, обновлено: {updated}")
 
 
 async def create_admin() -> None:
@@ -88,7 +96,6 @@ async def create_admin() -> None:
             select(User).where(User.username == username)
         )
         if result.scalar_one_or_none():
-            print(f"Админ '{username}' уже существует")
             return
 
         admin_user = User(
@@ -104,8 +111,6 @@ async def create_admin() -> None:
         stats = UserStats(user_id=admin_user.id)
         db.add(stats)
         await db.commit()
-
-        print(f"Админ создан: {username} / {password}")
 
 
 async def main() -> None:

@@ -1,28 +1,45 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import api, { Task, TaskListResponse, TYPE_NAMES } from '@/lib/api';
-import { TaskCard } from '@/components/task-card';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { taskApi } from '@/entities/task/api/task-api';
+import { TaskCard } from '@/widgets/task-card/ui/task-card';
+import { TYPE_NAMES } from '@/shared/config/task-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import type { Task } from '@/entities/task/model/types';
 
-export default function TasksPage() {
+function TasksContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const urlType = searchParams.get('type');
+  const initialType = urlType ? Number(urlType) : null;
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [search, setSearch] = useState('');
-  const [taskType, setTaskType] = useState<number | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [taskType, setTaskType] = useState<number | null>(initialType);
 
   const fetchTasks = useCallback(async () => {
-    const params: Record<string, string | number> = { page, per_page: 10 };
-    if (taskType !== null) params.task_type = taskType;
-    if (search) params.search = search;
-    const r = await api.get<TaskListResponse>('/tasks', { params });
-    setTasks(r.data.tasks);
-    setTotal(r.data.total);
-    setPages(r.data.pages);
-  }, [page, taskType, search]);
+    try {
+      const data = await taskApi.getList({
+        page,
+        per_page: 10,
+        task_type: taskType ?? undefined,
+        search: appliedSearch || undefined,
+      });
+      setTasks(data.tasks);
+      setTotal(data.total);
+      setPages(data.pages);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [page, taskType, appliedSearch]);
 
   useEffect(() => {
     fetchTasks();
@@ -30,7 +47,20 @@ export default function TasksPage() {
 
   const handleSearch = () => {
     setPage(1);
-    fetchTasks();
+    setAppliedSearch(searchInput);
+  };
+
+  const selectType = (t: number | null) => {
+    setTaskType(t);
+    setPage(1);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (t !== null) {
+      params.set('type', t.toString());
+    } else {
+      params.delete('type');
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -40,11 +70,9 @@ export default function TasksPage() {
       <div className="flex gap-3 mb-4">
         <Input
           placeholder="🔍 Поиск по тексту..."
-          value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(e.target.value)
-          }
-          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleSearch()}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           className="flex-1"
         />
         <Button onClick={handleSearch}>Найти</Button>
@@ -56,10 +84,7 @@ export default function TasksPage() {
           <Button
             size="sm"
             variant={taskType === null ? 'default' : 'outline'}
-            onClick={() => {
-              setTaskType(null);
-              setPage(1);
-            }}
+            onClick={() => selectType(null)}
           >
             Все
           </Button>
@@ -68,10 +93,7 @@ export default function TasksPage() {
               key={t}
               size="sm"
               variant={taskType === t ? 'default' : 'outline'}
-              onClick={() => {
-                setTaskType(t);
-                setPage(1);
-              }}
+              onClick={() => selectType(t)}
               title={TYPE_NAMES[t]}
             >
               {t}
@@ -84,10 +106,7 @@ export default function TasksPage() {
               size="sm"
               variant={taskType === t ? 'default' : 'outline'}
               className={taskType === t ? 'bg-purple-600' : 'border-dashed'}
-              onClick={() => {
-                setTaskType(t);
-                setPage(1);
-              }}
+              onClick={() => selectType(t)}
               title={TYPE_NAMES[t]}
             >
               {t}
@@ -126,5 +145,15 @@ export default function TasksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense
+      fallback={<div className="text-center py-20 text-gray-500">Загрузка...</div>}
+    >
+      <TasksContent />
+    </Suspense>
   );
 }
