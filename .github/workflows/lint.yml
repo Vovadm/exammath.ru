@@ -37,6 +37,8 @@ jobs:
           make lint
 
       - name: Run tests
+        env:
+          SECRET_KEY: temporary_secret_for_testing_purposes
         run: |
           cd backend
           make test
