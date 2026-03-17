@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -14,9 +14,11 @@ from backend.schemas.task import TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+
 class PaginationParams(BaseModel):
     page: int = Field(1, ge=1)
     per_page: int = Field(50, ge=1, le=1000)
+
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse)
 async def update_task(
@@ -35,6 +37,7 @@ async def update_task(
     )
     return TaskResponse.model_validate(updated)
 
+
 @router.get("/users", response_model=list[UserResponse])
 async def get_users(
     pagination: Annotated[PaginationParams, Depends()],
@@ -46,6 +49,7 @@ async def get_users(
     end = start + pagination.per_page
     paginated_users = users[start:end]
     return [UserResponse.model_validate(u) for u in paginated_users]
+
 
 @router.put("/users/{user_id}/role")
 async def set_role(
@@ -60,6 +64,7 @@ async def set_role(
     user.role = role
     await repo.save(user)
     return {"ok": True}
+
 
 @router.get("/stats")
 async def get_stats(current_user: AdminUser, db: DbSession) -> dict:

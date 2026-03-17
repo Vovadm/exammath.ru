@@ -1,8 +1,7 @@
 import os
-from typing import Annotated
 
 import aiofiles
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from backend.core.deps import CurrentUser, DbSession
 from backend.core.deps import TeacherOrAdmin as AdminOrTeacher
@@ -60,7 +59,10 @@ async def get_all_solutions_for_task(
 
 @router.post("/upload/{solution_id}")
 async def upload_file(
-    solution_id: int, file: UploadFile, current_user: CurrentUser, db: DbSession
+    solution_id: int,
+    file: UploadFile,
+    current_user: CurrentUser,
+    db: DbSession,
 ) -> dict:
     if not file.filename:
         raise HTTPException(400, "Файл не имеет имени")
@@ -70,7 +72,7 @@ async def upload_file(
     os.makedirs(upload_dir, exist_ok=True)
     filepath = os.path.join(upload_dir, file.filename)
 
-    async with aiofiles.open(filepath, 'wb') as f:
+    async with aiofiles.open(filepath, "wb") as f:
         size = 0
         while chunk := await file.read(8192):
             size += len(chunk)
@@ -79,4 +81,6 @@ async def upload_file(
             await f.write(chunk)
 
     await file.seek(0)
-    return await get_service(db).upload_file(solution_id, current_user.id, file)
+    return await get_service(db).upload_file(
+        solution_id, current_user.id, file
+    )

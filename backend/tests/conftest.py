@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator
+from typing import Any, cast
 
 from faker import Faker
 from httpx import ASGITransport, AsyncClient
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from backend.api.routers.auth import limiter
 from backend.auth import create_access_token, hash_password
 from backend.database import Base, get_db
 from backend.domain.models import Task, User, UserStats
@@ -77,7 +79,7 @@ async def client(
 
     app.dependency_overrides[get_db] = _override_get_db
 
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=cast(Any, app))
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
@@ -146,3 +148,9 @@ async def make_task(
 
 def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Сбрасывает счетчики slowapi перед каждым тестом."""
+    limiter.reset()

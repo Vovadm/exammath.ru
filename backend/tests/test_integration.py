@@ -15,7 +15,7 @@ class TestStudentFlow:
             json={
                 "username": username,
                 "email": fake.unique.email(),
-                "password": "StudentPass1",
+                "password": "StudentPass1!",
             },
         )
         assert reg_resp.status_code == 200

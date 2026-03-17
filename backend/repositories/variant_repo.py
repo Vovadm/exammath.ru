@@ -15,7 +15,7 @@ class VariantRepository:
             .options(
                 selectinload(Variant.items).selectinload(VariantItem.task),
                 selectinload(Variant.creator),
-                selectinload(Variant.school_class)
+                selectinload(Variant.school_class),
             )
             .where(Variant.id == variant_id)
         )
@@ -23,11 +23,10 @@ class VariantRepository:
 
     async def get_all(self) -> list[Variant]:
         result = await self._db.execute(
-            select(Variant)
-            .options(
+            select(Variant).options(
                 selectinload(Variant.items),
                 selectinload(Variant.creator),
-                selectinload(Variant.school_class)
+                selectinload(Variant.school_class),
             )
         )
         return list(result.scalars().all())
@@ -38,7 +37,7 @@ class VariantRepository:
             .options(
                 selectinload(Variant.items),
                 selectinload(Variant.creator),
-                selectinload(Variant.school_class)
+                selectinload(Variant.school_class),
             )
             .where(Variant.created_by == user_id)
         )
@@ -50,7 +49,7 @@ class VariantRepository:
             .options(
                 selectinload(Variant.items),
                 selectinload(Variant.creator),
-                selectinload(Variant.school_class)
+                selectinload(Variant.school_class),
             )
             .where(Variant.class_id.in_(class_ids))
         )

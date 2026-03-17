@@ -2,15 +2,14 @@ import asyncio
 from logging.config import fileConfig
 import os
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
 # Импортируем базовый класс и модели
 from backend.database import Base
-from backend.domain.models import * # noqa
+from backend.domain.models import *  # noqa
 
 # Это объект конфигурации Alembic, который предоставляет
 # доступ к значениям внутри используемого .ini файла
@@ -28,14 +27,14 @@ target_metadata = Base.metadata
 def get_url():
     # 1. Сначала пытаемся получить URL из флага -x
     x_args = context.get_x_argument(as_dictionary=True)
-    if 'db_url' in x_args:
-        return x_args['db_url']
-    
+    if "db_url" in x_args:
+        return x_args["db_url"]
+
     # 2. Затем из переменной окружения
     url = os.getenv("DATABASE_URL")
     if url:
         return url
-        
+
     # 3. Затем из alembic.ini
     return config.get_main_option("sqlalchemy.url")
 

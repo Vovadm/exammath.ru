@@ -1,12 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.deps import DbSession
 from backend.repositories.task_repo import TaskRepository
-from backend.schemas.task import TaskListResponse, TaskResponse, TaskSearchQuery
+from backend.schemas.task import (
+    TaskListResponse,
+    TaskResponse,
+    TaskSearchQuery,
+)
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+
 
 @router.get("", response_model=TaskListResponse)
 async def get_tasks(
@@ -20,6 +25,7 @@ async def get_tasks(
         search=query.search,
         filter=query.filter,
     )
+
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: int, db: DbSession) -> TaskResponse:
