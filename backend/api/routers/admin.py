@@ -40,9 +40,7 @@ async def get_users(
     per_page: Annotated[int, Query(ge=1, le=1000)] = 50,
 ) -> list[UserResponse]:
     start = (page - 1) * per_page
-    result = await db.execute(
-        select(User).offset(start).limit(per_page)
-    )
+    result = await db.execute(select(User).offset(start).limit(per_page))
     users = result.scalars().all()
     return [UserResponse.model_validate(u) for u in users]
 
