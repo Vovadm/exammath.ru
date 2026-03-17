@@ -42,7 +42,7 @@ class CheckAnswerRequest(BaseModel):
     @classmethod
     def validate_answer(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("Answer cannot be empty")
+            raise ValueError("Ответ не может быть пустым")
         return v.strip()
 
 

@@ -1,6 +1,5 @@
 import os
-import re
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -13,16 +12,18 @@ from backend.auth import (
     hash_password,
     verify_password,
 )
+from backend.core.config import IS_PROD
 from backend.core.deps import CurrentUser, DbSession
 from backend.domain.models.user import User
 from backend.repositories.user_repo import UserRepository
-from backend.schemas.auth import UserResponse
+from backend.schemas.auth import UserResponse, validate_password_strength
 from backend.turnstile import verify_turnstile
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 COOKIE_MAX_AGE = ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+SAME_SITE_MODE: Literal["strict", "lax"] = "strict" if IS_PROD else "lax"
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
@@ -30,23 +31,11 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=IS_PROD,
+        samesite=SAME_SITE_MODE,
         max_age=COOKIE_MAX_AGE,
         path="/api",
     )
-
-
-def validate_password_strength(password: str) -> str:
-    if not re.search(r"[A-Z]", password):
-        raise ValueError("Пароль должен содержать заглавную букву")
-    if not re.search(r"[a-z]", password):
-        raise ValueError("Пароль должен содержать строчную букву")
-    if not re.search(r"\d", password):
-        raise ValueError("Пароль должен содержать цифру")
-    if not re.search(r"[@$!%*?&]", password):
-        raise ValueError("Пароль должен содержать спецсимвол")
-    return password
 
 
 class RegisterRequest(BaseModel):

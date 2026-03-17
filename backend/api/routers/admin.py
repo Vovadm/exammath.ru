@@ -1,7 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
 from backend.core.deps import AdminUser, DbSession
@@ -13,11 +12,6 @@ from backend.schemas.auth import UserResponse
 from backend.schemas.task import TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
-
-
-class PaginationParams(BaseModel):
-    page: int = Field(1, ge=1)
-    per_page: int = Field(50, ge=1, le=1000)
 
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse)
@@ -40,13 +34,14 @@ async def update_task(
 
 @router.get("/users", response_model=list[UserResponse])
 async def get_users(
-    pagination: Annotated[PaginationParams, Depends()],
     current_user: AdminUser,
     db: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=1000)] = 50,
 ) -> list[UserResponse]:
     users = await UserRepository(db).get_all()
-    start = (pagination.page - 1) * pagination.per_page
-    end = start + pagination.per_page
+    start = (page - 1) * per_page
+    end = start + per_page
     paginated_users = users[start:end]
     return [UserResponse.model_validate(u) for u in paginated_users]
 

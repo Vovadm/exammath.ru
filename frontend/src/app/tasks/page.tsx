@@ -32,7 +32,7 @@ function TasksContent() {
         task_type: taskType ?? undefined,
         search: appliedSearch || undefined,
       }),
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false },
   );
 
   const tasks = data?.tasks || [];
@@ -80,13 +80,13 @@ function TasksContent() {
         />
         <Button onClick={handleSearch}>Найти</Button>
       </div>
-      
-      {errorMsg && (
-        <p className="text-red-500 text-sm mb-4">{errorMsg}</p>
-      )}
+
+      {errorMsg && <p className="text-red-500 text-sm mb-4">{errorMsg}</p>}
 
       {error && (
-        <p className="text-red-500 text-sm mb-4">Ошибка при загрузке заданий: {error.message}</p>
+        <p className="text-red-500 text-sm mb-4">
+          Ошибка при загрузке заданий: {error.message}
+        </p>
       )}
 
       <div className="mb-6">
