@@ -19,6 +19,7 @@ import type { Task } from '@/entities/task/model/types';
 import { TYPE_NAMES, PART2_TYPES } from '@/shared/config/task-types';
 import { formatMath } from '@/lib/math-format';
 
+const TABLE_HTML_CACHE_MAX_SIZE = 100;
 const tableHtmlCache = new Map<string, string>();
 
 function getSanitizedTableHtml(t: string): string {
@@ -41,6 +42,14 @@ function getSanitizedTableHtml(t: string): string {
         '<th class="border border-gray-300 px-3 py-2 text-center bg-indigo-50 font-semibold text-indigo-900"',
       ),
   );
+
+  if (tableHtmlCache.size >= TABLE_HTML_CACHE_MAX_SIZE) {
+    const firstKey = tableHtmlCache.keys().next().value as string | undefined;
+    if (firstKey !== undefined) {
+      tableHtmlCache.delete(firstKey);
+    }
+  }
+
   tableHtmlCache.set(t, sanitized);
   return sanitized;
 }
