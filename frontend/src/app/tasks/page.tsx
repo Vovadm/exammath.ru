@@ -40,17 +40,18 @@ function TasksContent() {
   const pages = data?.pages || 1;
 
   const handleSearch = () => {
-    if (searchInput.trim().length > 0 && searchInput.trim().length < 3) {
+    const trimmedSearch = searchInput.trim();
+    if (trimmedSearch.length > 0 && trimmedSearch.length < 3) {
       setErrorMsg('Минимальная длина поиска - 3 символа');
       return;
     }
-    if (searchInput.length > 100) {
+    if (trimmedSearch.length > 100) {
       setErrorMsg('Максимальная длина поиска - 100 символов');
       return;
     }
     setErrorMsg(null);
     setPage(1);
-    setAppliedSearch(searchInput.trim());
+    setAppliedSearch(trimmedSearch);
   };
 
   const selectType = (t: number | null) => {
