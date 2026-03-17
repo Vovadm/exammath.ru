@@ -52,10 +52,10 @@ class VariantItem(Base):
         Integer, primary_key=True, autoincrement=True
     )
     variant_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("variants.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("variants.id", ondelete="CASCADE"), nullable=False, index=True
     )
     task_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("tasks.id"), nullable=False
+        Integer, ForeignKey("tasks.id"), nullable=False, index=True
     )
     position: Mapped[int] = mapped_column(Integer, default=0)
 

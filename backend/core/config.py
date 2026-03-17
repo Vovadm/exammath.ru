@@ -1,7 +1,14 @@
 import os
+import secrets
 
 ENV = os.getenv("ENV", "production")
 IS_PROD = ENV == "production"
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if IS_PROD:
+        raise ValueError("SECRET_KEY must be set in production")
+    SECRET_KEY = secrets.token_urlsafe(32)
 
 CORS_ORIGINS: list[str] = [
     "https://exammath.ru",

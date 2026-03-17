@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import DOMPurify from 'isomorphic-dompurify';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
       <CardContent className="p-5">
         <div
           className="text-sm leading-8 text-gray-800"
-          dangerouslySetInnerHTML={{ __html: processText(task.text) }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(processText(task.text)) }}
         />
 
         {task.tables?.map((t, i) => (
@@ -95,16 +96,18 @@ export function TaskCard({ task, index }: TaskCardProps) {
             key={i}
             className="my-4 overflow-x-auto"
             dangerouslySetInnerHTML={{
-              __html: proxyUrl(t)
-                .replace('<table>', '<table class="w-full border-collapse text-sm">')
-                .replace(
-                  /<td/g,
-                  '<td class="border border-gray-300 px-3 py-2 text-center"',
-                )
-                .replace(
-                  /<th/g,
-                  '<th class="border border-gray-300 px-3 py-2 text-center bg-indigo-50 font-semibold text-indigo-900"',
-                ),
+              __html: DOMPurify.sanitize(
+                proxyUrl(t)
+                  .replace('<table>', '<table class="w-full border-collapse text-sm">')
+                  .replace(
+                    /<td/g,
+                    '<td class="border border-gray-300 px-3 py-2 text-center"',
+                  )
+                  .replace(
+                    /<th/g,
+                    '<th class="border border-gray-300 px-3 py-2 text-center bg-indigo-50 font-semibold text-indigo-900"',
+                  )
+              )
             }}
           />
         ))}

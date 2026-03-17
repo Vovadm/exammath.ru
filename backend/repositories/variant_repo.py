@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.domain.models.variant import Variant, VariantItem
 
@@ -10,23 +11,48 @@ class VariantRepository:
 
     async def get_by_id(self, variant_id: int) -> Variant | None:
         result = await self._db.execute(
-            select(Variant).where(Variant.id == variant_id)
+            select(Variant)
+            .options(
+                selectinload(Variant.items).selectinload(VariantItem.task),
+                selectinload(Variant.creator),
+                selectinload(Variant.school_class)
+            )
+            .where(Variant.id == variant_id)
         )
         return result.scalar_one_or_none()
 
     async def get_all(self) -> list[Variant]:
-        result = await self._db.execute(select(Variant))
+        result = await self._db.execute(
+            select(Variant)
+            .options(
+                selectinload(Variant.items),
+                selectinload(Variant.creator),
+                selectinload(Variant.school_class)
+            )
+        )
         return list(result.scalars().all())
 
     async def get_by_creator(self, user_id: int) -> list[Variant]:
         result = await self._db.execute(
-            select(Variant).where(Variant.created_by == user_id)
+            select(Variant)
+            .options(
+                selectinload(Variant.items),
+                selectinload(Variant.creator),
+                selectinload(Variant.school_class)
+            )
+            .where(Variant.created_by == user_id)
         )
         return list(result.scalars().all())
 
     async def get_by_class_ids(self, class_ids: list[int]) -> list[Variant]:
         result = await self._db.execute(
-            select(Variant).where(Variant.class_id.in_(class_ids))
+            select(Variant)
+            .options(
+                selectinload(Variant.items),
+                selectinload(Variant.creator),
+                selectinload(Variant.school_class)
+            )
+            .where(Variant.class_id.in_(class_ids))
         )
         return list(result.scalars().all())
 

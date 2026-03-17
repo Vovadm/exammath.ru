@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import useSWR from 'swr';
 import { taskApi } from '@/entities/task/api/task-api';
 import { TaskCard } from '@/widgets/task-card/ui/task-card';
 import { TYPE_NAMES } from '@/shared/config/task-types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import type { Task } from '@/entities/task/model/types';
 
 function TasksContent() {
   const router = useRouter();
@@ -17,37 +17,40 @@ function TasksContent() {
   const urlType = searchParams.get('type');
   const initialType = urlType ? Number(urlType) : null;
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [taskType, setTaskType] = useState<number | null>(initialType);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const data = await taskApi.getList({
+  const { data, error, isLoading } = useSWR(
+    ['tasks', page, taskType, appliedSearch],
+    () =>
+      taskApi.getList({
         page,
         per_page: 10,
         task_type: taskType ?? undefined,
         search: appliedSearch || undefined,
-      });
-      setTasks(data.tasks);
-      setTotal(data.total);
-      setPages(data.pages);
-    } catch (e) {
-      console.error(e);
-    }
-  }, [page, taskType, appliedSearch]);
+      }),
+    { revalidateOnFocus: false }
+  );
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+  const tasks = data?.tasks || [];
+  const total = data?.total || 0;
+  const pages = data?.pages || 1;
 
   const handleSearch = () => {
+    if (searchInput.trim().length > 0 && searchInput.trim().length < 3) {
+      setErrorMsg('Минимальная длина поиска - 3 символа');
+      return;
+    }
+    if (searchInput.length > 100) {
+      setErrorMsg('Максимальная длина поиска - 100 символов');
+      return;
+    }
+    setErrorMsg(null);
     setPage(1);
-    setAppliedSearch(searchInput);
+    setAppliedSearch(searchInput.trim());
   };
 
   const selectType = (t: number | null) => {
@@ -77,6 +80,14 @@ function TasksContent() {
         />
         <Button onClick={handleSearch}>Найти</Button>
       </div>
+      
+      {errorMsg && (
+        <p className="text-red-500 text-sm mb-4">{errorMsg}</p>
+      )}
+
+      {error && (
+        <p className="text-red-500 text-sm mb-4">Ошибка при загрузке заданий: {error.message}</p>
+      )}
 
       <div className="mb-6">
         <p className="text-sm text-gray-500 mb-2 font-semibold">Тип задания:</p>
@@ -119,30 +130,36 @@ function TasksContent() {
         Показано: <b>{tasks.length}</b> из {total}
       </p>
 
-      {tasks.map((task, i) => (
-        <TaskCard key={task.id} task={task} index={(page - 1) * 10 + i + 1} />
-      ))}
+      {isLoading ? (
+        <div className="text-center py-10 text-gray-500">Загрузка заданий...</div>
+      ) : (
+        <>
+          {tasks.map((task, i) => (
+            <TaskCard key={task.id} task={task} index={(page - 1) * 10 + i + 1} />
+          ))}
 
-      {pages > 1 && (
-        <div className="flex justify-center gap-2 mt-6">
-          <Button
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-          >
-            ◀
-          </Button>
-          <span className="flex items-center px-4 text-sm text-gray-600">
-            {page} / {pages}
-          </span>
-          <Button
-            variant="outline"
-            disabled={page >= pages}
-            onClick={() => setPage(page + 1)}
-          >
-            ▶
-          </Button>
-        </div>
+          {pages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                ◀
+              </Button>
+              <span className="flex items-center px-4 text-sm text-gray-600">
+                {page} / {pages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={page >= pages}
+                onClick={() => setPage(page + 1)}
+              >
+                ▶
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

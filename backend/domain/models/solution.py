@@ -20,10 +20,10 @@ class Solution(Base):
         Integer, primary_key=True, autoincrement=True
     )
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
+        Integer, ForeignKey("users.id"), nullable=False, index=True
     )
     task_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("tasks.id"), nullable=False
+        Integer, ForeignKey("tasks.id"), nullable=False, index=True
     )
     answer: Mapped[str | None] = mapped_column(String(255))
     is_correct: Mapped[bool | None] = mapped_column(Boolean)
@@ -55,7 +55,7 @@ class SolutionFile(Base):
         Integer, primary_key=True, autoincrement=True
     )
     solution_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("solutions.id"), nullable=False
+        Integer, ForeignKey("solutions.id"), nullable=False, index=True
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     filepath: Mapped[str] = mapped_column(String(500), nullable=False)

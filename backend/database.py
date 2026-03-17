@@ -22,9 +22,9 @@ if not DATABASE_URL:
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=300,
+    pool_size=25,
+    max_overflow=50,
+    pool_recycle=3600,
     pool_pre_ping=True,
 )
 async_session = async_sessionmaker(

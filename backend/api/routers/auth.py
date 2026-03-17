@@ -1,8 +1,11 @@
 import os
+import re
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request, Response
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from backend.auth import (
     ACCESS_TOKEN_EXPIRE_DAYS,
@@ -17,35 +20,48 @@ from backend.repositories.user_repo import UserRepository
 from backend.schemas.auth import UserResponse
 from backend.turnstile import verify_turnstile
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 COOKIE_MAX_AGE = ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-
 
 def _set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=IS_PROD,
-        samesite="lax",
+        secure=True,
+        samesite="strict",
         max_age=COOKIE_MAX_AGE,
-        path="/",
+        path="/api",
     )
 
+def validate_password_strength(password: str) -> str:
+    if not re.search(r'[A-Z]', password):
+        raise ValueError('Пароль должен содержать заглавную букву')
+    if not re.search(r'[a-z]', password):
+        raise ValueError('Пароль должен содержать строчную букву')
+    if not re.search(r'\d', password):
+        raise ValueError('Пароль должен содержать цифру')
+    if not re.search(r'[@$!%*?&]', password):
+        raise ValueError('Пароль должен содержать спецсимвол')
+    return password
 
 class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(min_length=3, max_length=50, pattern=r'^\w+$')
+    email: EmailStr
+    password: str = Field(min_length=8)
     turnstile_token: Optional[str] = None
 
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 class LoginRequest(BaseModel):
     username: str
     password: str
     turnstile_token: Optional[str] = None
-
 
 async def _verify_captcha(token: Optional[str]) -> None:
     if token:
@@ -54,10 +70,10 @@ async def _verify_captcha(token: Optional[str]) -> None:
     elif os.getenv("TURNSTILE_SECRET_KEY"):
         raise HTTPException(400, "Требуется пройти капчу")
 
-
 @router.post("/register", response_model=UserResponse)
+@limiter.limit("5/minute")
 async def register(
-    data: RegisterRequest, response: Response, db: DbSession
+    request: Request, data: RegisterRequest, response: Response, db: DbSession
 ) -> User:
     await _verify_captcha(data.turnstile_token)
 
@@ -77,9 +93,11 @@ async def register(
     _set_auth_cookie(response, create_access_token({"sub": user.id}))
     return user
 
-
 @router.post("/login", response_model=UserResponse)
-async def login(data: LoginRequest, response: Response, db: DbSession) -> User:
+@limiter.limit("10/minute")
+async def login(
+    request: Request, data: LoginRequest, response: Response, db: DbSession
+) -> User:
     await _verify_captcha(data.turnstile_token)
 
     repo = UserRepository(db)
@@ -90,12 +108,10 @@ async def login(data: LoginRequest, response: Response, db: DbSession) -> User:
     _set_auth_cookie(response, create_access_token({"sub": user.id}))
     return user
 
-
 @router.post("/logout")
 async def logout(response: Response) -> dict[str, bool]:
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="access_token", path="/api")
     return {"ok": True}
-
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: CurrentUser) -> User:

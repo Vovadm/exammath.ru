@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SolutionFileResponse(BaseModel):
@@ -35,8 +35,15 @@ class SolutionResponse(BaseModel):
 
 
 class CheckAnswerRequest(BaseModel):
-    task_id: int
-    answer: str
+    task_id: int = Field(gt=0)
+    answer: str = Field(max_length=255)
+
+    @field_validator('answer')
+    @classmethod
+    def validate_answer(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError('Answer cannot be empty')
+        return v.strip()
 
 
 class CheckAnswerResponse(BaseModel):
