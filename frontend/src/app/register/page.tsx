@@ -29,8 +29,18 @@ export default function RegisterPage() {
       await register(username, email, password, turnstileToken);
       router.push('/tasks');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      setError(axiosErr.response?.data?.detail || 'Ошибка регистрации');
+      const axiosErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg: string }> } };
+      };
+      const detail = axiosErr.response?.data?.detail;
+
+      if (Array.isArray(detail)) {
+        setError(detail[0]?.msg || 'Ошибка валидации данных');
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Ошибка регистрации');
+      }
     } finally {
       setLoading(false);
     }

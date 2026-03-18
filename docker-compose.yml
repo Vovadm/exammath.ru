@@ -35,7 +35,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       PYTHONPATH: /app
     volumes:
-      - uploads:/app/uploads
+      - ./uploads:/app/uploads
       - ./fipi_questions.json:/app/fipi_questions.json:ro
     depends_on:
       db:

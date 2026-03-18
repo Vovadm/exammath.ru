@@ -28,8 +28,18 @@ export default function LoginPage() {
       await login(username, password, turnstileToken);
       router.push('/tasks');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      setError(axiosErr.response?.data?.detail || 'Ошибка входа');
+      const axiosErr = err as {
+        response?: { data?: { detail?: string | Array<{ msg: string }> } };
+      };
+      const detail = axiosErr.response?.data?.detail;
+
+      if (Array.isArray(detail)) {
+        setError(detail[0]?.msg || 'Ошибка валидации данных');
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Ошибка входа');
+      }
     } finally {
       setLoading(false);
     }
