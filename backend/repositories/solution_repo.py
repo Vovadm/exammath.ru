@@ -105,3 +105,13 @@ class SolutionRepository:
         self._db.add(sf)
         await self._db.commit()
         return sf
+
+    async def delete(self, solution: Solution) -> None:
+        files_result = await self._db.execute(
+            select(SolutionFile).where(SolutionFile.solution_id == solution.id)
+        )
+        for f in files_result.scalars().all():
+            await self._db.delete(f)
+
+        await self._db.delete(solution)
+        await self._db.commit()

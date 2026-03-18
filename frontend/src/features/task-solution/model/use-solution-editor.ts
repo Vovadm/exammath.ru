@@ -10,10 +10,18 @@ interface UseSolutionEditorReturn {
   solutionFiles: { id: number; filename: string }[];
   uploading: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  showWhiteboard: boolean;
+  setShowWhiteboard: (v: boolean) => void;
   save: (taskId: number, answer: string | null) => Promise<void>;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   triggerUpload: (taskId: number, answer: string | null) => Promise<void>;
   loadFromSolution: (solutions: Solution[]) => void;
+  handleWhiteboardSave: (
+    taskId: number,
+    answer: string | null,
+    blob: Blob,
+  ) => Promise<void>;
+  deleteSolution: () => Promise<boolean>;
 }
 
 export function useSolutionEditor(): UseSolutionEditorReturn {
@@ -24,6 +32,7 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
     { id: number; filename: string }[]
   >([]);
   const [uploading, setUploading] = useState(false);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateSolutionId = (id: number | null) => {
@@ -38,7 +47,12 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
     if (textBlock) setSolutionText(textBlock.value);
     updateSolutionId(latest.id);
     if (latest.files) {
-      setSolutionFiles(latest.files.map((f) => ({ id: f.id, filename: f.filepath })));
+      setSolutionFiles(
+        latest.files.map((f: { id: number; filepath: string }) => ({
+          id: f.id,
+          filename: f.filepath,
+        })),
+      );
     }
   };
 
@@ -54,12 +68,10 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const currentId = solutionIdRef.current;
-    if (!e.target.files?.[0] || !currentId) return;
+  const uploadFileBlob = async (currentId: number, file: File | Blob) => {
     setUploading(true);
     try {
-      const data = await solutionApi.uploadFile(currentId, e.target.files[0]);
+      const data = await solutionApi.uploadFile(currentId, file);
       setSolutionFiles((prev) => [...prev, { id: data.id, filename: data.filename }]);
     } catch {
       toast.error('Ошибка загрузки файла');
@@ -67,6 +79,12 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentId = solutionIdRef.current;
+    if (!e.target.files?.[0] || !currentId) return;
+    await uploadFileBlob(currentId, e.target.files[0]);
   };
 
   const triggerUpload = async (taskId: number, answer: string | null) => {
@@ -85,6 +103,43 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
     }
   };
 
+  const handleWhiteboardSave = async (
+    taskId: number,
+    answer: string | null,
+    blob: Blob,
+  ) => {
+    let currentId = solutionIdRef.current;
+    if (!currentId) {
+      try {
+        const data = await solutionApi.save(taskId, answer, [
+          { type: 'text', value: solutionText },
+        ]);
+        updateSolutionId(data.id);
+        currentId = data.id;
+      } catch {
+        toast.error('Сначала сохраните решение');
+        return;
+      }
+    }
+    setShowWhiteboard(false);
+    await uploadFileBlob(currentId, blob);
+  };
+
+  const deleteSolution = async () => {
+    if (!solutionId) return false;
+    try {
+      await solutionApi.delete(solutionId);
+      setSolutionText('');
+      setSolutionFiles([]);
+      updateSolutionId(null);
+      toast.success('Решение удалено');
+      return true;
+    } catch {
+      toast.error('Ошибка при удалении');
+      return false;
+    }
+  };
+
   return {
     solutionText,
     setSolutionText,
@@ -92,9 +147,13 @@ export function useSolutionEditor(): UseSolutionEditorReturn {
     solutionFiles,
     uploading,
     fileInputRef,
+    showWhiteboard,
+    setShowWhiteboard,
     save,
     handleFileChange,
     triggerUpload,
     loadFromSolution,
+    handleWhiteboardSave,
+    deleteSolution,
   };
 }

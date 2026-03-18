@@ -81,3 +81,11 @@ async def upload_file(
     return await get_service(db).upload_file(
         solution_id, current_user.id, file
     )
+
+
+@router.delete("/{solution_id}")
+async def delete_solution(
+    solution_id: int, current_user: CurrentUser, db: DbSession
+) -> dict:
+    await get_service(db).delete(solution_id, current_user.id)
+    return {"ok": True}

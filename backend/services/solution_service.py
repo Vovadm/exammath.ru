@@ -175,3 +175,11 @@ class SolutionService:
             updated_at=s.updated_at,
             username=s.user.username if s.user else None,
         )
+
+    async def delete(self, solution_id: int, user_id: int) -> None:
+        solution = await self._solutions.get_by_id(solution_id)
+        if not solution:
+            raise HTTPException(404, "Решение не найдено")
+        if solution.user_id != user_id:
+            raise HTTPException(403, "Вы не можете удалить чужое решение")
+        await self._solutions.delete(solution)
