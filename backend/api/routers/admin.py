@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
 from backend.core.deps import AdminUser, DbSession
@@ -32,9 +34,14 @@ async def update_task(
 
 @router.get("/users", response_model=list[UserResponse])
 async def get_users(
-    current_user: AdminUser, db: DbSession
+    current_user: AdminUser,
+    db: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=1000)] = 50,
 ) -> list[UserResponse]:
-    users = await UserRepository(db).get_all()
+    start = (page - 1) * per_page
+    result = await db.execute(select(User).offset(start).limit(per_page))
+    users = result.scalars().all()
     return [UserResponse.model_validate(u) for u in users]
 
 

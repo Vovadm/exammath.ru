@@ -15,6 +15,8 @@ async def wait_for_db():
             async with engine.begin() as conn:
                 await conn.execute(text('SELECT 1'))
             print('БД доступна!')
+            
+            await engine.dispose() 
             return True
         except Exception as e:
             print(f'Попытка {i+1}/30: {e}')

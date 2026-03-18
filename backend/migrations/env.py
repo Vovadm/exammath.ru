@@ -1,15 +1,6 @@
 import asyncio
 from logging.config import fileConfig
 import os
-from pathlib import Path
-import re
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from alembic import context
 from sqlalchemy import pool
@@ -17,7 +8,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from backend.database import Base
-import backend.domain.models  # noqa: F401
+from backend.domain.models import *
+from backend.domain.models import audit
 
 config = context.config
 
@@ -27,40 +19,58 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def _local_url(url: str) -> str:
-    return re.sub(r"@db(:\d+)?/", "@127.0.0.1:3307/", url)
+def get_url() -> str:
+    x_args = context.get_x_argument(as_dictionary=True)
+    if "db_url" in x_args:
+        return str(x_args["db_url"])
 
+    url = os.getenv("DATABASE_URL")
+    if url:
+        return str(url)
 
-_db_url = _local_url(os.getenv("DATABASE_URL", ""))
-config.set_main_option("sqlalchemy.url", _db_url)
+    ini_url = config.get_main_option("sqlalchemy.url")
+    if not ini_url:
+        raise ValueError("Database URL is missing")
+
+    return str(ini_url)
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
+
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
+    configuration = config.get_section(config.config_ini_section, {})
+    if configuration is None:
+        configuration = {}
+
+    configuration["sqlalchemy.url"] = get_url()
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
     await connectable.dispose()
 
 

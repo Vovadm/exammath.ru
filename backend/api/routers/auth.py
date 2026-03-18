@@ -1,8 +1,10 @@
 import os
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request, Response
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from backend.auth import (
     ACCESS_TOKEN_EXPIRE_DAYS,
@@ -14,12 +16,14 @@ from backend.core.config import IS_PROD
 from backend.core.deps import CurrentUser, DbSession
 from backend.domain.models.user import User
 from backend.repositories.user_repo import UserRepository
-from backend.schemas.auth import UserResponse
+from backend.schemas.auth import UserResponse, validate_password_strength
 from backend.turnstile import verify_turnstile
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 COOKIE_MAX_AGE = ACCESS_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+SAME_SITE_MODE: Literal["strict", "lax"] = "strict" if IS_PROD else "lax"
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
@@ -28,17 +32,22 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         secure=IS_PROD,
-        samesite="lax",
+        samesite=SAME_SITE_MODE,
         max_age=COOKIE_MAX_AGE,
-        path="/",
+        path="/api",
     )
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(min_length=3, max_length=50, pattern=r"^\w+$")
+    email: EmailStr
+    password: str = Field(min_length=8)
     turnstile_token: Optional[str] = None
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class LoginRequest(BaseModel):
@@ -56,8 +65,9 @@ async def _verify_captcha(token: Optional[str]) -> None:
 
 
 @router.post("/register", response_model=UserResponse)
+@limiter.limit("5/minute")
 async def register(
-    data: RegisterRequest, response: Response, db: DbSession
+    request: Request, data: RegisterRequest, response: Response, db: DbSession
 ) -> User:
     await _verify_captcha(data.turnstile_token)
 
@@ -79,7 +89,10 @@ async def register(
 
 
 @router.post("/login", response_model=UserResponse)
-async def login(data: LoginRequest, response: Response, db: DbSession) -> User:
+@limiter.limit("10/minute")
+async def login(
+    request: Request, data: LoginRequest, response: Response, db: DbSession
+) -> User:
     await _verify_captcha(data.turnstile_token)
 
     repo = UserRepository(db)
@@ -93,7 +106,7 @@ async def login(data: LoginRequest, response: Response, db: DbSession) -> User:
 
 @router.post("/logout")
 async def logout(response: Response) -> dict[str, bool]:
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="access_token", path="/api")
     return {"ok": True}
 
 

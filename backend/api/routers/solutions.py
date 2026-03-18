@@ -1,6 +1,6 @@
-from typing import Annotated
+import os
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from backend.core.deps import CurrentUser, DbSession
 from backend.core.deps import TeacherOrAdmin as AdminOrTeacher
@@ -16,7 +16,6 @@ from backend.schemas.solution import (
 from backend.services.solution_service import SolutionService
 
 router = APIRouter(prefix="/api/solutions", tags=["solutions"])
-Upload = Annotated[UploadFile, File(...)]
 
 
 def get_service(db: DbSession) -> SolutionService:
@@ -59,8 +58,26 @@ async def get_all_solutions_for_task(
 
 @router.post("/upload/{solution_id}")
 async def upload_file(
-    solution_id: int, file: Upload, current_user: CurrentUser, db: DbSession
+    solution_id: int,
+    file: UploadFile,
+    current_user: CurrentUser,
+    db: DbSession,
 ) -> dict:
+    if not file.filename:
+        raise HTTPException(400, "Файл не имеет имени")
+
+    safe_filename = os.path.basename(file.filename)
+    if safe_filename != file.filename or not safe_filename.strip():
+        raise HTTPException(400, "Недопустимое имя файла")
+
+    max_size = 10 * 1024 * 1024
+    size = 0
+    while chunk := await file.read(8192):
+        size += len(chunk)
+        if size > max_size:
+            raise HTTPException(413, "Файл слишком большой")
+
+    await file.seek(0)
     return await get_service(db).upload_file(
         solution_id, current_user.id, file
     )
