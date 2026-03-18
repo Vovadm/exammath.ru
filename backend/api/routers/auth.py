@@ -106,7 +106,13 @@ async def login(
 
 @router.post("/logout")
 async def logout(response: Response) -> dict[str, bool]:
-    response.delete_cookie(key="access_token", path="/api")
+    response.delete_cookie(
+        key="access_token",
+        path="/api",
+        httponly=True,
+        secure=IS_PROD,
+        samesite=SAME_SITE_MODE,
+    )
     return {"ok": True}
 
 

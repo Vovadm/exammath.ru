@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.domain.models.solution import Solution, SolutionFile
 
@@ -54,13 +55,26 @@ class SolutionRepository:
     ) -> dict[int, Solution]:
         result = await self._db.execute(
             select(Solution)
+            .options(selectinload(Solution.files))
             .where(Solution.user_id == user_id, Solution.task_id.in_(task_ids))
             .order_by(Solution.created_at.desc())
         )
+
         solutions: dict[int, Solution] = {}
         for s in result.scalars().all():
             if s.task_id not in solutions:
                 solutions[s.task_id] = s
+            else:
+                existing = solutions[s.task_id]
+                if existing.answer is None and s.answer is not None:
+                    existing.answer = s.answer
+                if existing.is_correct is None and s.is_correct is not None:
+                    existing.is_correct = s.is_correct
+                if not existing.content and s.content:
+                    existing.content = s.content
+                if not existing.files and s.files:
+                    existing.files = s.files
+
         return solutions
 
     async def create(self, **kwargs: object) -> Solution:
