@@ -48,7 +48,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="ru" className="font-sans">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <AuthProvider>
           <Header />

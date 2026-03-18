@@ -21,9 +21,14 @@ export const solutionApi = {
   getAll: (task_id: number) =>
     http.get<Solution[]>(`/solutions/task/${task_id}/all`).then((r) => r.data),
 
-  uploadFile: (solution_id: number, file: File) => {
+  uploadFile: (solution_id: number, file: File | Blob) => {
     const form = new FormData();
-    form.append('file', file);
+    if (file instanceof File) {
+      form.append('file', file);
+    } else {
+      form.append('file', file, 'whiteboard.png');
+    }
+
     return http
       .post<{
         id: number;
@@ -32,4 +37,7 @@ export const solutionApi = {
       }>(`/solutions/upload/${solution_id}`, form)
       .then((r) => r.data);
   },
+
+  delete: (solution_id: number) =>
+    http.delete(`/solutions/${solution_id}`).then((r) => r.data),
 };

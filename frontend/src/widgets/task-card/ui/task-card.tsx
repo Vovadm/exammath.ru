@@ -162,12 +162,17 @@ export function TaskCard({ task, index }: TaskCardProps) {
             onClose={() => setShowSolution(false)}
             solutionText={editor.solutionText}
             setSolutionText={editor.setSolutionText}
+            solutionId={editor.solutionId}
             solutionFiles={editor.solutionFiles}
             uploading={editor.uploading}
             fileInputRef={editor.fileInputRef}
+            showWhiteboard={editor.showWhiteboard}
+            setShowWhiteboard={editor.setShowWhiteboard}
             save={editor.save}
             handleFileChange={editor.handleFileChange}
             triggerUpload={editor.triggerUpload}
+            handleWhiteboardSave={editor.handleWhiteboardSave}
+            deleteSolution={editor.deleteSolution}
           />
         )}
 
