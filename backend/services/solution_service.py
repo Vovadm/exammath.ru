@@ -183,7 +183,6 @@ class SolutionService:
         if solution.user_id != user_id:
             raise HTTPException(403, "Вы не можете удалить чужое решение")
 
-        # Best-effort cleanup of files stored on disk for this solution
         for f in getattr(solution, "files", []) or []:
             if not getattr(f, "filepath", None):
                 continue
@@ -191,10 +190,8 @@ class SolutionService:
             try:
                 os.remove(file_path)
             except FileNotFoundError:
-                # File already missing; ignore
                 pass
             except OSError:
-                # Ignore other filesystem errors to not block solution deletion
                 pass
 
         await self._solutions.delete(solution)
