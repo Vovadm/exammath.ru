@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from backend.domain.models.task import Task
 from backend.tests.conftest import make_task
 
 pytestmark = pytest.mark.asyncio
@@ -18,7 +19,7 @@ class TestGetSingleTask:
         assert data["id"] == task.id
         assert data["task_type"] == 5
         assert data["text"] == "Найдите значение"
-        assert data["answer"] == "42"
+        assert "answer" not in data
 
     async def test_get_task_includes_all_fields(self, client, db_session):
         task = await make_task(db_session)
@@ -29,9 +30,13 @@ class TestGetSingleTask:
             "fipi_id",
             "task_type",
             "text",
-            "answer",
             "images",
             "tables",
+            "likes",
+            "dislikes",
+            "total_attempts",
+            "solved_count",
+            "difficulty",
         ):
             assert field in data
 
@@ -53,9 +58,14 @@ class TestTaskFilters:
         )
         resp = await client.get("/api/tasks", params={"filter": "no_answer"})
         assert resp.status_code == 200
-        for t in resp.json()["tasks"]:
+        tasks_data = resp.json()["tasks"]
+        texts = [t["text"] for t in tasks_data]
+        assert "Без ответа" in texts
+        assert "Пустой ответ" in texts
+        for t in tasks_data:
             assert 1 <= t["task_type"] <= 12
-            assert t["answer"] is None or t["answer"] == ""
+            db_task = await db_session.get(Task, t["id"])
+            assert db_task.answer is None or db_task.answer == ""
 
 
 class TestPaginationEdge:

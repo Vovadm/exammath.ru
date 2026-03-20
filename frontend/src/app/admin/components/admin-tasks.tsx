@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { taskApi } from '@/entities/task/api/task-api';
+import { adminApi } from '@/entities/admin/api/admin-api';
 import { TYPE_NAMES } from '@/shared/config/task-types';
 import type { Task } from '@/entities/task/model/types';
 import EditTaskModal from './edit-task-modal';
@@ -30,7 +30,7 @@ export default function AdminTasks() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const data = await taskApi.getList({
+      const data = await adminApi.getTasks({
         page,
         per_page: 10,
         task_type: activeFilter ? undefined : (taskType ?? undefined),

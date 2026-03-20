@@ -2,7 +2,12 @@ from sqlalchemy import and_, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.domain.models.task import Task
-from backend.schemas.task import TaskListResponse, TaskResponse
+from backend.schemas.task import (
+    TaskAdminListResponse,
+    TaskAdminResponse,
+    TaskListResponse,
+    TaskResponse,
+)
 
 
 class TaskRepository:
@@ -26,7 +31,8 @@ class TaskRepository:
         task_type: int | None = None,
         search: str | None = None,
         filter: str | None = None,
-    ) -> TaskListResponse:
+        is_admin: bool = False,
+    ) -> TaskListResponse | TaskAdminListResponse:
         q = select(Task)
         count_q = select(func.count(Task.id))
 
@@ -59,10 +65,17 @@ class TaskRepository:
         result = await self._db.execute(
             q.offset((page - 1) * per_page).limit(per_page)
         )
-        tasks = [
-            TaskResponse.model_validate(t) for t in result.scalars().all()
-        ]
+        db_tasks = result.scalars().all()
 
+        if is_admin:
+            tasks_admin = [
+                TaskAdminResponse.model_validate(t) for t in db_tasks
+            ]
+            return TaskAdminListResponse(
+                tasks=tasks_admin, total=total, page=page, pages=pages
+            )
+
+        tasks = [TaskResponse.model_validate(t) for t in db_tasks]
         return TaskListResponse(
             tasks=tasks, total=total, page=page, pages=pages
         )
