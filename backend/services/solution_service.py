@@ -28,20 +28,36 @@ class SolutionService:
         self._tasks = task_repo
         self._users = user_repo
 
-    async def check_answer(
-        self, task_id: int, answer: str, user_id: int
-    ) -> CheckAnswerResponse:
-        task = await self._tasks.get_by_id(task_id)
-        if not task:
-            raise HTTPException(404, "Задание не найдено")
+    def _is_answer_correct(self, expected: str | None, actual: str) -> bool:
+        if not expected:
+            return False
+        return (
+            actual.strip().replace(",", ".").lower()
+            == expected.strip().replace(",", ".").lower()
+        )
 
-        correct = False
-        if task.answer:
-            correct = (
-                answer.strip().replace(",", ".").lower()
-                == task.answer.strip().replace(",", ".").lower()
-            )
+    async def _update_task_stats(
+        self, task, correct: bool, is_first_try: bool, has_solved_before: bool
+    ) -> None:
+        need_update = False
+        if is_first_try:
+            task.total_attempts += 1
+            need_update = True
 
+        if correct and not has_solved_before:
+            task.solved_count += 1
+            need_update = True
+
+        if need_update:
+            await self._tasks.update(task)
+
+    async def _update_user_stats(
+        self,
+        user_id: int,
+        correct: bool,
+        has_solved_before: bool,
+        task_type: int,
+    ) -> None:
         stats = await self._users.get_stats(user_id)
         if not stats:
             stats = await self._users.create_stats(user_id)
@@ -54,22 +70,42 @@ class SolutionService:
             stats.streak_current += 1
             if stats.streak_current > stats.streak_max:
                 stats.streak_max = stats.streak_current
-            existing = await self._solutions.get_latest_for_user_task(
-                user_id, task_id, is_correct=True
-            )
-            if not existing:
+            if not has_solved_before:
                 stats.tasks_solved += 1
         else:
             stats.streak_current = 0
 
-        type_key = str(task.task_type)
+        type_key = str(task_type)
         by_type = dict(stats.stats_by_type) if stats.stats_by_type else {}
         by_type.setdefault(type_key, {"attempts": 0, "correct": 0})
         by_type[type_key]["attempts"] += 1
         if correct:
             by_type[type_key]["correct"] += 1
         stats.stats_by_type = by_type
+
         await self._users.save_stats(stats)
+
+    async def check_answer(
+        self, task_id: int, answer: str, user_id: int
+    ) -> CheckAnswerResponse:
+        task = await self._tasks.get_by_id(task_id)
+        if not task:
+            raise HTTPException(404, "Задание не найдено")
+
+        correct = self._is_answer_correct(task.answer, answer)
+
+        existing_solutions = await self._solutions.get_user_task_solutions(
+            user_id, task_id
+        )
+        is_first_try = len(existing_solutions) == 0
+        has_solved_before = any(s.is_correct for s in existing_solutions)
+
+        await self._update_task_stats(
+            task, correct, is_first_try, has_solved_before
+        )
+        await self._update_user_stats(
+            user_id, correct, has_solved_before, task.task_type
+        )
 
         await self._solutions.create(
             user_id=user_id, task_id=task_id, answer=answer, is_correct=correct

@@ -9,6 +9,11 @@ export interface Task {
   images: string[];
   inline_images: string[];
   tables: string[];
+  likes: number;
+  dislikes: number;
+  difficulty: number;
+  total_attempts: number;
+  solved_count: number;
 }
 
 export interface TaskListResponse {

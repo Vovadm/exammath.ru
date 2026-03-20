@@ -14,4 +14,18 @@ export const taskApi = {
     http.get<TaskListResponse>('/tasks', { params }).then((r) => r.data),
 
   getById: (id: number) => http.get<Task>(`/tasks/${id}`).then((r) => r.data),
+
+  getVote: (id: number) =>
+    http
+      .get<{ vote: 'like' | 'dislike' | null }>(`/tasks/${id}/vote`)
+      .then((r) => r.data),
+
+  vote: (id: number, vote: 'like' | 'dislike' | null) =>
+    http
+      .post<{
+        likes: number;
+        dislikes: number;
+        user_vote: string | null;
+      }>(`/tasks/${id}/vote`, { vote })
+      .then((r) => r.data),
 };

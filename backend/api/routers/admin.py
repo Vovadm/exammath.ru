@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
@@ -9,15 +9,42 @@ from backend.domain.models.user import User
 from backend.repositories.task_repo import TaskRepository
 from backend.repositories.user_repo import UserRepository
 from backend.schemas.auth import UserResponse
-from backend.schemas.task import TaskResponse, TaskUpdate
+from backend.schemas.task import (
+    TaskAdminListResponse,
+    TaskAdminResponse,
+    TaskUpdate,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-@router.put("/tasks/{task_id}", response_model=TaskResponse)
+@router.get("/tasks", response_model=TaskAdminListResponse)
+async def get_admin_tasks(
+    current_user: AdminUser,
+    db: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=50)] = 10,
+    task_type: Annotated[int | None, Query()] = None,
+    search: Annotated[str | None, Query()] = None,
+    filter: Annotated[str | None, Query()] = None,
+) -> TaskAdminListResponse:
+    return cast(
+        TaskAdminListResponse,
+        await TaskRepository(db).get_paginated(
+            page=page,
+            per_page=per_page,
+            task_type=task_type,
+            search=search,
+            filter=filter,
+            is_admin=True,
+        ),
+    )
+
+
+@router.put("/tasks/{task_id}", response_model=TaskAdminResponse)
 async def update_task(
     task_id: int, data: TaskUpdate, current_user: AdminUser, db: DbSession
-) -> TaskResponse:
+) -> TaskAdminResponse:
     repo = TaskRepository(db)
     task = await repo.get_by_id(task_id)
     if not task:
@@ -29,7 +56,7 @@ async def update_task(
         answer=data.answer,
         hint=data.hint,
     )
-    return TaskResponse.model_validate(updated)
+    return TaskAdminResponse.model_validate(updated)
 
 
 @router.get("/users", response_model=list[UserResponse])
