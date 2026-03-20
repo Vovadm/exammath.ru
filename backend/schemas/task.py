@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -62,4 +62,4 @@ class TaskSearchQuery(BaseModel):
 
 
 class VoteRequest(BaseModel):
-    vote: Optional[str] = None
+    vote: Literal["like", "dislike"] | None = None

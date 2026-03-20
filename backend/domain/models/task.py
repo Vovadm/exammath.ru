@@ -38,10 +38,18 @@ class Task(Base):
     inline_images: Mapped[list[Any]] = mapped_column(JSON, default=list)
     tables: Mapped[list[Any]] = mapped_column(JSON, default=list)
 
-    likes: Mapped[int] = mapped_column(Integer, default=0)
-    dislikes: Mapped[int] = mapped_column(Integer, default=0)
-    total_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    solved_count: Mapped[int] = mapped_column(Integer, default=0)
+    likes: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+    dislikes: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+    total_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+    solved_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

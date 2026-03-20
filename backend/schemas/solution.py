@@ -15,7 +15,7 @@ class SolutionFileResponse(BaseModel):
 
 class SolutionCreate(BaseModel):
     task_id: int
-    answer: Optional[str] = None
+    answer: Optional[str] = Field(None, max_length=2000)
     content: list[Any] = Field(default_factory=list)
 
 

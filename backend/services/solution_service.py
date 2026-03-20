@@ -39,17 +39,11 @@ class SolutionService:
     async def _update_task_stats(
         self, task, correct: bool, is_first_try: bool, has_solved_before: bool
     ) -> None:
-        need_update = False
         if is_first_try:
             task.total_attempts += 1
-            need_update = True
 
         if correct and not has_solved_before:
             task.solved_count += 1
-            need_update = True
-
-        if need_update:
-            await self._tasks.update(task)
 
     async def _update_user_stats(
         self,
@@ -83,8 +77,6 @@ class SolutionService:
             by_type[type_key]["correct"] += 1
         stats.stats_by_type = by_type
 
-        await self._users.save_stats(stats)
-
     async def check_answer(
         self, task_id: int, answer: str, user_id: int
     ) -> CheckAnswerResponse:
@@ -100,6 +92,7 @@ class SolutionService:
         is_first_try = len(existing_solutions) == 0
         has_solved_before = any(s.is_correct for s in existing_solutions)
 
+        # Выполняем обновления статистики в сессии
         await self._update_task_stats(
             task, correct, is_first_try, has_solved_before
         )
@@ -107,9 +100,13 @@ class SolutionService:
             user_id, correct, has_solved_before, task.task_type
         )
 
+        # Создаем решение (без финального коммита)
         await self._solutions.create(
             user_id=user_id, task_id=task_id, answer=answer, is_correct=correct
         )
+
+        # ДЕЛАЕМ ЕДИНСТВЕННЫЙ COMMIT ДЛЯ ВСЕХ ОПЕРАЦИЙ
+        await self._tasks._db.commit()
 
         return CheckAnswerResponse(
             correct=correct,

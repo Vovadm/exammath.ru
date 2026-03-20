@@ -23,11 +23,8 @@ export function TaskCard({ task, index }: TaskCardProps) {
   const [initialCorrect, setInitialCorrect] = useState<boolean | null>(null);
 
   const editor = useSolutionEditor();
-  const { likes, dislikes, userVote, handleLike, handleDislike } = useTaskRating(
-    task.id,
-    task.likes,
-    task.dislikes,
-  );
+  const { likes, dislikes, userVote, isLoading, handleLike, handleDislike } =
+    useTaskRating(task.id, task.likes, task.dislikes);
 
   const isTeacherOrAdmin = user?.role === 'admin' || user?.role === 'teacher';
 
@@ -62,6 +59,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
         likes={likes}
         dislikes={dislikes}
         userVote={userVote}
+        isLoading={isLoading}
         handleLike={handleLike}
         handleDislike={handleDislike}
         showSolution={showSolution}

@@ -10,6 +10,7 @@ interface TaskCardFooterProps {
   likes: number;
   dislikes: number;
   userVote: 'like' | 'dislike' | null;
+  isLoading: boolean;
   handleLike: () => void;
   handleDislike: () => void;
   showSolution: boolean;
@@ -23,6 +24,7 @@ export function TaskCardFooter({
   likes,
   dislikes,
   userVote,
+  isLoading,
   handleLike,
   handleDislike,
   showSolution,
@@ -40,6 +42,7 @@ export function TaskCardFooter({
           <Button
             variant="ghost"
             size="sm"
+            disabled={isLoading}
             className={`h-8 px-2 transition-colors ${userVote === 'like' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'hover:bg-gray-200'}`}
             onClick={handleLike}
           >
@@ -52,6 +55,7 @@ export function TaskCardFooter({
           <Button
             variant="ghost"
             size="sm"
+            disabled={isLoading}
             className={`h-8 px-2 transition-colors ${userVote === 'dislike' ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'hover:bg-gray-200'}`}
             onClick={handleDislike}
           >
